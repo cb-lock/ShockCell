@@ -1,0 +1,377 @@
+#ifdef ESP32
+  #include <WiFi.h>
+#else
+  #include <ESP8266WiFi.h>
+#endif
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
+#include <ArduinoJson.h>
+
+#include "esp32-hal-ledc.h"
+#include "Oled.h"
+#include "Defs.h"
+#include "TimeF.h"
+#include "EServer.h"
+
+// ---------------------------------
+
+// Peripherals
+OledDisplay oledDisplay;
+int coverState = 0;
+int oldCoverState = 0;
+unsigned long timeOfLastShock;
+
+String last_chat_id;
+//StreamString sString;
+TimeFunctions timeFunc;
+EmlaServer emlaServer(oledDisplay);
+
+
+// Replace with your network credentials
+//const char* ssid = "Fritz Neumann 2";
+//const char* password = "Fam!1pee1968197020012004";
+
+// Initialize Telegram BOT
+#define BOTtoken "1264046045:AAEk49lP6viWTAkZ0jItDas5Y_03ZjoPPMg"  // your Bot Token (Get from Botfather)
+
+// Use @myidbot to find out the chat ID of an individual or a group
+// Also note that you need to click "start" on a bot before it can
+// message you
+#define CHAT_ID "1157999292"
+//#define CHAT_ID "-486177324"
+
+WiFiClientSecure client;
+UniversalTelegramBot bot(BOTtoken, client);
+
+// Checks for new messages every 1 second.
+int botRequestDelay = 1000;
+unsigned long lastTimeBotRan;
+
+String botCommands = 
+"/shock1 - Shock for 1 seconds\n/shock3 - Shock for 3 seconds\n/shock5 - Shock for 5 seconds\n/shock10 - Shock for 10 seconds\n/shock30 - Shock for 30 seconds\n/state - Report the cover state\n/start - Start communication";
+
+/*
+/shock1 - Shock for 1 seconds
+/shock3 - Shock for 3 seconds
+/shock5 - Shock for 5 seconds
+/shock10 - Shock for 10 seconds
+/shock30 - Shock for 30 seconds
+/state - Report the cover state
+/start - Start communication
+ */
+
+
+
+// ------------------------------------------------------------------------
+void PrintDisplay(String statusMsg = "")
+{
+  String line[20];
+
+  line[0] = "ShockCell";
+  line[1] = "";
+  line[2] = "";
+  line[3] = "";
+  line[4] = "";
+  line[5] = statusMsg;
+  line[6] = timeFunc.GetTimeString();
+
+  oledDisplay.Show(line);
+}
+
+
+
+// ------------------------------------------------------------------------
+void Shock(int count, long milliseconds)
+{
+  String msg = "Shock processing for " + String((milliseconds / 1000), DEC) + " s begins...";
+  bot.sendMessage(last_chat_id, msg, "");
+  Serial.print("*** Shock() milliseconds=");
+  Serial.print(milliseconds);
+  Serial.print(", count=");
+  Serial.print(count);
+  String prefix = "#=" + String(count, DEC) + " t=" + String((milliseconds / 1000), DEC);
+
+  // IFTTT webhook handling
+  {
+    String payload;
+    String request = "value1=" + String(count, DEC) + "&value2=" + String(milliseconds, DEC) + "&value3=Telegram";
+    Serial.print("*** IFTTT webhook");
+    Serial.println(request);
+
+    int trial = 0;
+    bool success = false;
+    while ((trial < 10) && ! success)
+    {
+      success = emlaServer.WPost("https://maker.ifttt.com/trigger/s_received/with/key/2ONo1D18q28kdbCU-6zNT", request, payload, true);
+      trial++;
+      if (trial > 1)
+      {
+        Serial.print("Retry: ");
+        Serial.println(trial);
+      }
+      if (! success)
+        delay(1000);
+    }
+  }
+
+  int firstBurst = 0;
+  long now = timeFunc.GetTimeInSeconds();
+
+  Serial.print("last shock ago: ");
+  Serial.println(now - timeOfLastShock);
+  if ((now - timeOfLastShock) > 250)
+    firstBurst = 2000;
+
+  for (int i = 0; i < count; i++)
+  {
+    Serial.println("*** Shock processing: ");
+    Serial.print(i);
+    Serial.print(", ");
+    Serial.print(milliseconds);
+    Serial.println(" ms");
+
+    digitalWrite(SHOCK_PIN, HIGH);
+    delay(100);
+    digitalWrite(SHOCK_PIN, LOW);
+    delay(200);
+
+    digitalWrite(SHOCK_PIN, HIGH);
+    delay(milliseconds + firstBurst);
+    digitalWrite(SHOCK_PIN, LOW);
+
+    delay(SHOCK_BREAK_DURATION);
+  }
+
+  msg = "Shock processing completed. :-)";
+  bot.sendMessage(last_chat_id, msg, "");
+  timeOfLastShock = now;
+}
+
+
+
+// -------------------------------------------------
+// Handle what happens when you receive new messages
+void handleNewMessages(int numNewMessages)
+{
+//  Serial.println("handleNewMessages");
+//  Serial.println(String(numNewMessages));
+
+  for (int i=0; i<numNewMessages; i++)
+  {
+    // Chat id of the requester
+    String chat_id = String(bot.messages[i].chat_id);
+    last_chat_id = chat_id;
+    Serial.print("Chat ID: ");
+    Serial.println(chat_id);
+    if (chat_id != CHAT_ID)
+    {
+//      bot.sendMessage(chat_id, "Foreign user", "");
+//      continue;
+    }
+
+    // Print the received message
+    String from_name = bot.messages[i].from_name;
+    Serial.print(from_name);
+    Serial.print(": ");
+    String text = bot.messages[i].text;
+    Serial.println(text);
+
+    if (text == "/start")
+    {
+      String welcome = "Welcome, " + from_name + ".\n";
+      welcome += "Use the following commands to control Charly's ShockCell.\n\n";
+      welcome += botCommands;
+      bot.sendMessage(chat_id, welcome, "");
+    }
+    else if (text == "/shock1")
+    {
+      bot.sendMessage(chat_id, "Sending shock: 1s", "");
+      Shock(1, 1000);
+    }
+    else if (text == "/shock3")
+    {
+      bot.sendMessage(chat_id, "Sending shock: 3s", "");
+      Shock(1, 3000);
+    }
+    else if (text == "/shock5")
+    {
+      bot.sendMessage(chat_id, "Sending shock: 5s", "");
+      Shock(1, 5000);
+    }
+    else if (text == "/shock10")
+    {
+      bot.sendMessage(chat_id, "Sending shock: 10s", "");
+      Shock(1, 10000);
+    }
+    else if (text == "/shock30")
+    {
+      bot.sendMessage(chat_id, "Sending shock: 30s", "");
+      Shock(1, 30000);
+    }
+    else if (text == "/state")
+    {
+      if (coverState == COVER_OPEN)
+      {
+        bot.sendMessage(chat_id, "Cover is open.", "");
+      }
+      else
+      {
+        bot.sendMessage(chat_id, "Cover is closed.", "");
+      }
+    }
+  }
+}
+
+
+
+// ------------------------------------------------------------------------
+void Lock()
+{
+}
+
+// ------------------------------------------------------------------------
+void ForcedUnlock()
+{
+  PrintDisplay("Unlock GRANTED!");
+  ledcAttachPin(SERVO_PIN, 1);
+  delay(50);
+  ledcWrite(1, 2999);
+//    myservo.write(90);
+  delay(3000);
+//    myservo.write(0);
+  ledcWrite(1, 999);
+  delay(500);
+  ledcDetachPin(SERVO_PIN);
+}
+
+// ------------------------------------------------------------------------
+void Unlock()
+{
+  ForcedUnlock();
+}
+
+
+
+// -------------------------------------------------
+void setup()
+{
+  Serial.begin(115200);
+  delay(200);
+
+  // Pins
+  pinMode(SHOCK_PIN, OUTPUT);
+  //  pinMode(LED_ACTIVE, OUTPUT);
+  //  digitalWrite(LED_ACTIVE, HIGH);
+  // pin controlling the cover state
+  pinMode(COVER_OPEN_PIN, INPUT_PULLUP);
+
+  // OLED
+  oledDisplay.Init();
+
+  // servo
+  // channel 1, 50 Hz, 16 bit width
+  ledcSetup(1, 50, 16);
+  // GPIO 2 attached to channel 1
+  ledcAttachPin(SERVO_PIN, 1);
+
+  #ifdef ESP8266
+    client.setInsecure();
+  #endif
+
+  // WiFi connection
+/*
+  if (sString.reserve(HTTP_BUFFER_SIZE))
+  {
+    Serial.println("*** Memory allocation for HTTP stream ok.");
+  }
+  else
+  {
+    Serial.println("*** Memory allocation for HTTP stream FAILED!");  
+  }
+  */
+  bool success = false;
+  while (!success)
+  {
+    oledDisplay.PrintInitDisplay(SSID2, 0, 0);
+    success = emlaServer.Connect2WiFi(SSID2, PASSWORD2, 3);
+    if (!success)
+    {
+      oledDisplay.PrintInitDisplay(SSID1, 0, 0);
+      success = emlaServer.Connect2WiFi(SSID1, PASSWORD1, 3);
+    }
+    if (!success)
+    {
+      oledDisplay.PrintInitDisplay(SSID1, 0, 0);
+      success = emlaServer.Connect2WiFi(SSID3, PASSWORD3, 3);
+    }
+    if (!success)
+    {
+      oledDisplay.PrintInitDisplay(SSID2, 0, 0);
+      success = emlaServer.Connect2WiFi(SSID2, PASSWORD2, 3);
+    }
+    if (!success)
+    {
+      oledDisplay.PrintInitDisplay(SSID1, 0, 0);
+      success = emlaServer.Connect2WiFi(SSID1, PASSWORD1, 3);
+    }
+    if (!success)
+    {
+      oledDisplay.PrintInitDisplay(SSID1, 0, 0);
+      success = emlaServer.Connect2WiFi(SSID3, PASSWORD3, 3);
+    }
+    if (!success)
+    {
+      oledDisplay.PrintInitDisplay(SSID2, 0, 0);
+      success = emlaServer.Connect2WiFi(SSID2, PASSWORD2, 30);
+    }
+    if (!success)
+    {
+      oledDisplay.PrintInitDisplay(SSID1, 0, 0);
+      success = emlaServer.Connect2WiFi(SSID1, PASSWORD1, 30);
+    }
+    if (!success)
+    {
+      oledDisplay.PrintInitDisplay(SSID1, 0, 0);
+      success = emlaServer.Connect2WiFi(SSID3, PASSWORD3, 30);
+    }
+  }
+
+  coverState = digitalRead(COVER_OPEN_PIN);
+  oldCoverState = coverState;
+
+  last_chat_id = CHAT_ID;
+}
+
+
+
+// -------------------------------------------------
+void loop()
+{
+  //------------
+  coverState = digitalRead(COVER_OPEN_PIN);
+  if (coverState != oldCoverState)
+  {
+//    PrintDisplay();
+    if (coverState == COVER_CLOSED)
+      bot.sendMessage(last_chat_id, "Cover has been closed.", "");
+   else
+      bot.sendMessage(last_chat_id, "Cover has been opened.", "");
+
+    oldCoverState = coverState;
+  }
+
+  if (millis() > lastTimeBotRan + botRequestDelay)
+  {
+    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+
+    while(numNewMessages)
+    {
+      Serial.println("got response");
+      handleNewMessages(numNewMessages);
+      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+    }
+    lastTimeBotRan = millis();
+  }
+}
+
+//

@@ -1,0 +1,215 @@
+#include <EEPROM.h>
+
+#include "TimeF.h"
+#include "User.h"
+#include "Defs.h"
+#include "Message.h"
+
+
+RoleSet roles;
+
+extern TimeFunctions timeFunc;
+extern UniversalTelegramBot bot;
+extern Message message;
+extern UserSet users;
+
+
+
+// ------------------------------------------------------------------------
+bool User::SetRoleId(int r, bool force)
+{
+  Serial.println("*** SetRoleId()");
+  User *wearer = users.GetWearer();
+  User *holder = users.GetHolder();
+  switch(r)
+  {
+    case ROLE_WEARER_FREE:
+    case ROLE_WEARER_WAITING:
+    case ROLE_WEARER_COLLARED:
+      // check other users
+      // if current user is the wearer or if current user may be turned into one...
+      if (force ||
+          (wearer && (wearer->GetId() == GetId()) || MayBecomeWearer()))
+      {
+        roleId = r;
+        return true;
+      }
+      else
+        return false;
+      break;
+    case ROLE_HOLDER:
+      // check other users
+      if (force ||
+          (holder && (holder->GetId() == GetId()) || MayBecomeHolder()))
+      {
+        roleId = r;
+        // get index of current user
+        int index = userSet->GetIndexFromId(GetId());
+        userSet->SetHolderIndex(index);
+        return true;
+      }
+      else
+        return false;
+      break;
+    case ROLE_SHOCKCELL:
+    case ROLE_TEASER:
+    case ROLE_GUEST:
+    default:
+      if (GetRoleId() == ROLE_HOLDER)
+        userSet->SetHolderIndex(USER_NONE);
+      roleId = r;
+      break;
+  }
+}
+
+
+// ------------------------------------------------------------------------
+bool User::MayBecomeHolder()
+{
+  return ((IsTeaser() || IsGuest()) &&
+          (! userSet->GetHolder()) &&
+          (! userSet->GetWearer()->IsFreeWearer()));
+}
+
+
+// ------------------------------------------------------------------------
+void User::SetBot(bool is)
+{
+  isBot = is;
+  bot.getMe();
+  name = bot.GetName();
+  roleId = ROLE_SHOCKCELL;
+}
+
+
+// ------------------------------------------------------------------------
+bool User::IsSleeping()
+{
+  // 23:00 - 5:59 is mandatory sleeping time
+  int hours = timeFunc.GetHours();
+  if ((hours < 6) || (hours > 22))
+    return true;
+  // else check the state
+  else
+    return sleeping;
+}
+
+
+// ------------------------------------------------------------------------
+int UserSet::AddUser(String id, String name, int roleId, bool isBot)
+{
+  Serial.println("*** UserSet::AddUser()");
+  int i = 0;
+  while (i < USER_CACHE_SIZE)
+  {
+    if (user[i].GetId().length() == 0)
+    {
+      // create new user
+      user[i].SetUserSet(this);
+      user[i].SetId(id);
+      user[i].SetName(name);
+      user[i].SetRoleId(roleId, true);
+      Serial.print("- add ");
+      Serial.print(id);
+      Serial.print(", ");
+      Serial.print(name);
+      Serial.print(", ");
+      Serial.print(roleId);
+      Serial.print(", ");
+      Serial.print(isBot);
+      Serial.println();
+      count = i + 1;
+      // we need to make sure that the description is changed with every request and not identical to the existing one.
+      return i;
+    }
+    else if (user[i].GetId() == id)
+    {
+      // update existing user
+      user[i].SetName(name);
+      user[i].UpgradeRoleId(roleId);
+      Serial.print(id);
+      Serial.print(", ");
+      Serial.print(name);
+      Serial.print(", ");
+      Serial.print(roleId);
+      Serial.println();
+      return i;
+    }
+    ++i;
+  }
+  return USER_NONE;
+}
+
+
+// ------------------------------------------------------------------------
+User * UserSet::GetUserFromIndex(int i)
+{
+  if (i >= 0)
+    return &user[i];
+  else
+    return NULL;
+}
+
+
+// ------------------------------------------------------------------------
+User * UserSet::GetUserFromId(String id)
+{
+  int i = 0;
+  while (i < USER_CACHE_SIZE)
+  {
+    if (user[i].GetId() == id)
+      return &user[i];
+    ++i;
+  }
+  return NULL;
+}
+
+
+// ------------------------------------------------------------------------
+User * UserSet::GetUserFromRole(int roleId)
+{
+  int i = 0;
+  while (i < USER_CACHE_SIZE)
+  {
+    // only return those matches of valid users
+    if ((user[i].GetId().length() > 0) &&
+        (user[i].GetRoleId() == roleId))
+      return &user[i];
+    ++i;
+  }
+  return NULL;
+}
+
+
+// ------------------------------------------------------------------------
+int UserSet::GetIndexFromId(String id)
+{
+  int i = 0;
+  while (i < USER_CACHE_SIZE)
+  {
+    if (user[i].GetId() == id)
+      return i;
+    ++i;
+  }
+  return USER_NONE;
+}
+
+ 
+// ------------------------------------------------------------------------
+String UserSet::GetUsersInfo()
+{
+  int i = 0;
+  String info;
+  while (i < USER_CACHE_SIZE)
+  {
+    if (user[i].GetId().length() > 0)
+    {
+      info += user[i].GetName() + ":" + user[i].GetId() + ":" + user[i].GetRoleStr() + "; ";
+    }
+    ++i;
+  }
+  return info;
+}
+
+
+//
