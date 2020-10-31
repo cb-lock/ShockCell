@@ -245,25 +245,58 @@ void Message::WaitingAction(String fromId, String chatId)
   if (users.GetUserFromId(fromId)->IsFreeWearer())
   {
     users.GetWearer()->SetRoleId(ROLE_WEARER_WAITING);
-    msg = "User " + users.GetWearerName() + " is now exposed and waiting to be collared by the holder." COMMON_MSG_WAITING;
+    msg = "Wearer " + users.GetWearerName() + " is now exposed and waiting to be collared by the holder." COMMON_MSG_WAITING;
     SendMessage(chatId, msg);
     UpdateChatDescription();
   }
   // does request comes from waiting wearer?
   else if (users.GetUserFromId(fromId)->IsWaitingWearer())
   {
-    msg = "User " + users.GetWearerName() + " is already waiting for capture by the holder." COMMON_MSG_WAITING;
+    msg = "Wearer " + users.GetWearerName() + " is already waiting for capture by the holder." COMMON_MSG_WAITING;
     SendMessage(chatId, msg);
   }
   // does request comes from collared wearer?
   else if (users.GetUserFromId(fromId)->IsCollaredWearer())
   {
-    msg = "User " + users.GetWearerName() + " is already collared and captured by the holder.";
+    msg = "Wearer " + users.GetWearerName() + " is already collared and captured by the holder.";
     SendMessage(chatId, msg);
   }
   else
   {
     msg = "Only the free wearer can use the command /waiting to make himself available for collaring by a holder.";
+    SendMessage(chatId, msg);
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Message::FreeAction(String fromId, String chatId)
+{
+  String msg;
+
+  // does request comes from waiting wearer?
+  if (users.GetUserFromId(fromId)->IsWaitingWearer())
+  {
+    users.GetWearer()->SetRoleId(ROLE_WEARER_FREE);
+    msg = "Wearer " + users.GetWearerName() + " is now free and cannot be collared by the holder.";
+    SendMessage(chatId, msg);
+    UpdateChatDescription();
+  }
+  // does request comes from free wearer?
+  else if (users.GetUserFromId(fromId)->IsFreeWearer())
+  {
+    msg = "Wearer " + users.GetWearerName() + " is already free.";
+    SendMessage(chatId, msg);
+  }
+  // does request comes from collared wearer?
+  else if (users.GetUserFromId(fromId)->IsCollaredWearer())
+  {
+    msg = "Request is denied! Wearer " + users.GetWearerName() + " is collared and captured by the holder. He must be released by the holder to get free.";
+    SendMessage(chatId, msg);
+  }
+  else
+  {
+    msg = "Only the waiting wearer can use the command /free to be safe from capturing by the holder.";
     SendMessage(chatId, msg);
   }
 }
@@ -561,8 +594,10 @@ void Message::ProcessNewMessages()
         WaitingAction(from_id, chat_id);
       else if (text == "/collar")
         CollarAction(from_id, chat_id);
-      else if ((text == "/release") || (text == "/free"))
+      else if (text == "/release")
         ReleaseAction(from_id, chat_id);
+      else if (text == "/free")
+        FreeAction(from_id, chat_id);
       else if (text == "/restrict")
         RestrictUserAction(from_id, chat_id);
       else if (text.substring(0, 1) == "/")
