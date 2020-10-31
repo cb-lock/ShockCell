@@ -40,6 +40,7 @@ public:
   void TeaserAction(String fromId, String chatId=GROUP_CHAT_ID);
   void GuestAction(String fromId, String chatId=GROUP_CHAT_ID);
   void WaitingAction(String fromId, String chatId=GROUP_CHAT_ID);
+  void FreeAction(String fromId, String chatId=GROUP_CHAT_ID);
   void CollarAction(String fromId, String chatId=GROUP_CHAT_ID);
   void UnlockAction(String fromId, String chatId=GROUP_CHAT_ID);
   void ReleaseAction(String fromId, String chatId=GROUP_CHAT_ID);
