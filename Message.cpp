@@ -73,6 +73,7 @@ Message::Message()
 // ------------------------------------------------------------------------
 void Message::Init()
 {
+  Serial.println("*** Message::Init()");
   // UserSet::Init() must have already be run!
   // populate values with defaults...
   session.SetTimeOfLastShock(timeFunc.GetTimeInSeconds());
@@ -98,7 +99,12 @@ void Message::Init()
     UpdateChatDescription();
   }
 
-  bot.setMyCommands(botCommandsAll);
+  String commands = botCommandsAll;
+  Serial.println(commands);
+  int pos = 0;
+  while ((pos = commands.indexOf('/')) != -1)
+    commands.remove(pos, 1);
+  bot.setMyCommands(commands);
 }
 
 
