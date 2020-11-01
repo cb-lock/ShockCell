@@ -80,6 +80,7 @@
 // ---------------------------------
 // TELEGRAM
 
+#define BOT_REQUEST_INTERVAL 1000
 #define CHAT_ID "TELEGRAM_CHAT_ID"
 
 // ---------------------------------

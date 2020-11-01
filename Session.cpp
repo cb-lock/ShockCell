@@ -202,11 +202,10 @@ void Session::InfoChastikey()
 }
 
 
-
 // ------------------------------------------------------------------------
 void Session::Punishment(int level)
 {
-  message.SendMessage(chatId, "Wearer " + users.GetWearer()->GetName() + "needs to be punished.");
+  message.SendMessage("Wearer " + users.GetWearer()->GetName() + "needs to be punished.", chatId);
   unsigned long rnd = random(10000);
   switch (rnd % level)
   {
@@ -240,6 +239,78 @@ void Session::Punishment(int level)
     case 9:
       Shock(10, 10000);
       break;
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Session::SetRandomMode(bool onOff, int shocksPerHour)
+{
+  Serial.println("*** Session::SetRandomMode()");
+  Serial.print("- onOff: ");
+  Serial.println(onOff);
+  Serial.print("- shocksPerHour: ");
+  Serial.println(shocksPerHour);
+  randomShockMode = onOff;
+  // randomShocksPerHour must be greater zero!
+  if (shocksPerHour > 0)
+    randomShocksPerHour = shocksPerHour;
+  else
+    randomShocksPerHour = 1;
+  if (randomShockMode)
+    ScheduleNextRandomShock();
+}
+
+
+// ------------------------------------------------------------------------
+void Session::ScheduleNextRandomShock()
+{
+  Serial.println("*** Session::ScheduleNextRandomShock()");
+  Serial.print("- randomShockMode: ");
+  Serial.println(randomShockMode);
+  Serial.print("- IsSleeping: ");
+  Serial.println(users.GetWearer()->IsSleeping());
+  if (users.GetWearer()->IsSleeping())
+  {
+    randomShockMode = false;
+  }
+  else
+  {
+    timeOfNextScheduledShock = timeFunc.GetTimeInSeconds() + random(86400*100) / (1200 * randomShocksPerHour);
+    Serial.print("- timeOfNextScheduledShock: ");
+    Serial.println(timeOfNextScheduledShock);
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Session::ProcessRandomShocks()
+{
+  Serial.println("*** Session::ProcessRandomShocks()");
+  Serial.print("- randomShockMode: ");
+  Serial.println(randomShockMode);
+  if (randomShockMode)
+  {
+    Serial.print("- IsSleeping: ");
+    Serial.println(users.GetWearer()->IsSleeping());
+    if (users.GetWearer()->IsSleeping())
+    {
+      // turn off random shock mode during sleeping time
+      randomShockMode = false;
+      return;
+    }
+
+    Serial.print("- timeOfNextScheduledShock: ");
+    Serial.println(timeOfNextScheduledShock);
+    Serial.print("- GetTimeInSeconds(): ");
+    Serial.println(timeFunc.GetTimeInSeconds());
+    if (timeOfNextScheduledShock < timeFunc.GetTimeInSeconds())
+    {
+      // execute random shock
+      message.ShockAction(GROUP_CHAT_ID, 1, 1000);
+      // and schedule the next one
+      ScheduleNextRandomShock();
+    }
   }
 }
 

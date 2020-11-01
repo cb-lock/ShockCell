@@ -23,7 +23,6 @@ Session session;
 ChatGroup chatGroup;
 UserSet users;
 
-int botRequestDelay = 1000;
 unsigned long lastTimeBotRan;
 
 void PrintDisplay(String statusMsg = "");
@@ -109,6 +108,9 @@ void setup()
 
   message.Init();
   session.InfoChastikey();
+
+  session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
+  session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
 }
 
 
@@ -118,6 +120,7 @@ void loop()
 {
   //------------
   unsigned long milliseconds = millis();
+  String msg;
 
   coverState = digitalRead(COVER_OPEN_PIN);
   if (coverState != oldCoverState)
@@ -128,16 +131,40 @@ void loop()
     oldCoverState = coverState;
   }
 
-  if (milliseconds > lastTimeBotRan + botRequestDelay)
+  if (milliseconds > lastTimeBotRan + BOT_REQUEST_INTERVAL)
   {
     message.ProcessNewMessages();
     lastTimeBotRan = millis();
   }
 
   // every 5 seconds
-  if ((milliseconds % 5000) == 0)
+  if (timeFunc.GetTimeInSeconds() >= (session.GetTimeOfLast5sInterval() + 5))
   {
     oledDisplay.PrintDisplay();
+    session.ProcessRandomShocks();
+    session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
+  }
+
+  // every 5 minutes
+  if (timeFunc.GetTimeInSeconds() >= (session.GetTimeOfLast5minInterval() + 5*60))
+  {
+//    mistress.CheckOffline();
+
+    // has the sleeping period just begun?
+    if (timeFunc.SleepingTimeJustChanged(true))
+    {
+      users.GetWearer()->SetSleeping(true);
+      msg = "Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.";
+      message.SendMessage(msg);
+    }
+    // has the sleeping period just ended?
+    if (timeFunc.SleepingTimeJustChanged(false))
+    {
+      users.GetWearer()->SetSleeping(false);
+      msg = "Good morning "  + users.GetWearer()->GetName() + ", wake up boy!";
+      message.SendMessage(msg);
+    }
+    session.SetTimeOfLast5minInterval(timeFunc.GetTimeInSeconds());
   }
 }
 

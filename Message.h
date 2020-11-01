@@ -24,7 +24,7 @@ public:
   void Init();
   void ProcessChatMessage(String msg, String fromId, String chatId=GROUP_CHAT_ID);
   void ProcessNewMessages();
-  void SendMessage(String id, String msg);
+  void SendMessage(String msg, String chatId=GROUP_CHAT_ID);
   void SendRichMessage(String id, String msg);
   void MessageLastShock(String chatId);
   void MessageIsClosed(String chatId);
@@ -45,6 +45,7 @@ public:
   void UnlockAction(String fromId, String chatId=GROUP_CHAT_ID);
   void ReleaseAction(String fromId, String chatId=GROUP_CHAT_ID);
   void RestrictUserAction(String fromId, String chatId=GROUP_CHAT_ID);
+  void RandomShockModeAction(String commandParameter, String fromId, String chatId);
   void SetChatDescription(String chatId, String descr);
   long ReadParamLong(String text, String id);
   void AdoptUserInfos(String text);

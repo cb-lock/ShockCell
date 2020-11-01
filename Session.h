@@ -19,15 +19,20 @@ private:
 //  User holder;
 //  User supervisor;
   bool activeChastikeySession = false;
+  bool randomShockMode = false;
+  unsigned long randomShocksPerHour = 1;
   String chastikeyHolder;
   unsigned long endTime;
   String endTimeStr;
   bool elapsedTimeDisplay;
   String releaseCode;
-  unsigned long timeOfLastUnlock;
-  unsigned long timeOfLastOpening;
-  unsigned long timeOfLastClosing;
-  unsigned long timeOfLastShock;
+  unsigned long timeOfLastUnlock = 0;
+  unsigned long timeOfLastOpening = 0;
+  unsigned long timeOfLastClosing = 0;
+  unsigned long timeOfLastShock = 0;
+  unsigned long timeOfNextScheduledShock = 0;
+  unsigned long timeOfLast5sInterval = 0;
+  unsigned long timeOfLast5minInterval = 0;
 //  String lastShockOwner;
 //  String lastShockReason;
 
@@ -64,6 +69,11 @@ public:
   unsigned long GetTimeOfLastShock() { return timeOfLastShock; }
   void SetTimeOfLastShock(unsigned long t) { timeOfLastShock = t; }
 
+  void SetTimeOfLast5sInterval(unsigned long setTime) { timeOfLast5sInterval = setTime; }
+  unsigned long GetTimeOfLast5sInterval() { return timeOfLast5sInterval; }
+  void SetTimeOfLast5minInterval(unsigned long setTime) { timeOfLast5minInterval = setTime; }
+  unsigned long GetTimeOfLast5minInterval() { return timeOfLast5minInterval; }
+
   unsigned long GetRemainingTime(bool forDisplay = false);
   unsigned long GetEndTime() { return endTime; }
   void SetEndTime(unsigned long t) { endTime = t; }
@@ -74,10 +84,13 @@ public:
 
   void Punishment(int level);
   void Shock(int count, long milliseconds);
+  void SetRandomMode(bool onOff, int shocksPerHour=1);
   void Lock();
   void ForcedUnlock();
   void Unlock();
   void InfoChastikey();
+
+  void ScheduleNextRandomShock();
 };
 
 #endif
