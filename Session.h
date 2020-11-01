@@ -90,6 +90,7 @@ public:
   void Unlock();
   void InfoChastikey();
 
+  void ProcessRandomShocks();
   void ScheduleNextRandomShock();
 };
 
