@@ -151,14 +151,14 @@ void loop()
 //    mistress.CheckOffline();
 
     // has the sleeping period just begun?
-    if (timeFunc.SleepingTimeJustChanged(true))
+    if (timeFunc.SleepingTimeJustChanged(true) && ! users.GetWearer()->IsSleeping())
     {
       users.GetWearer()->SetSleeping(true);
       msg = "Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.";
       message.SendMessage(msg);
     }
     // has the sleeping period just ended?
-    if (timeFunc.SleepingTimeJustChanged(false))
+    if (timeFunc.SleepingTimeJustChanged(false) && users.GetWearer()->IsSleeping())
     {
       users.GetWearer()->SetSleeping(false);
       msg = "Good morning "  + users.GetWearer()->GetName() + ", wake up boy!";
