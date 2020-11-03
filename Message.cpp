@@ -1,6 +1,7 @@
 #include <ArduinoJson.h>
 #include <WiFiClientSecure.h>
 
+#include "Defs.h"
 #include "Message.h"
 #include "EServer.h"
 #include "TimeF.h"
@@ -30,16 +31,19 @@ UniversalTelegramBot bot(BOT_TOKEN, clientsec);
 #define BOT_COMMANDS_GENERAL "/start - Start communication\n/state - Report the cover state\n/roles - List roles\n/users - List users in chat\n"
 #define BOT_COMMANDS_SHOCKS "/shock1 - Shock for 1 seconds\n/shock3 - Shock for 3 seconds\n/shock5 - Shock for 5 seconds\n/shock10 - Shock for 10 seconds\n/shock30 - Shock for 30 seconds\n"
 #define BOT_COMMANDS_RANDOM "/random_5 - Switch on random shock mode with 5 shocks per hour (other intervals work with corresponding numbers)\n/random_off - Switch off random shock mode\n"
+#define BOT_COMMANDS_TEASING "/teasing_on - Enable teasing\n/teasing_off - Disable teasing\n"
 #define BOT_COMMANDS_UNLOCK "/unlock - Unlock key safe\n"
 #define BOT_COMMANDS_ROLES "/holder - Adopt holder role\n/teaser - Adopt teaser role\n/guest - Adopt guest role\n"
-#define BOT_COMMANDS_WAITING "/waiting - Make wearer waiting to be collared by the holder\n/free - Make wearer free again (stops waiting for collaring)\n"
-#define BOT_COMMANDS_COLLAR "/collar - Collar and capture wearer as a sub\n/release - Release wearer as a sub (open collar)"
+#define BOT_COMMANDS_WAITING "/waiting - Make wearer waiting to be captured by the holder\n/free - Make wearer free again (stops waiting for capture)\n"
+#define BOT_COMMANDS_CAPTURE "/capture - Capture wearer as a sub\n/release - Release wearer as a sub"
+#define BOT_COMMANDS_EMERGENCY "/thisisanemergency - Release the wearer in case of an emergency\n"
 
-String botCommandsAll =    BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS                     BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES BOT_COMMANDS_WAITING BOT_COMMANDS_COLLAR ;
-String botCommandsWearer = BOT_COMMANDS_GENERAL                                         BOT_COMMANDS_UNLOCK                    BOT_COMMANDS_WAITING                     ;
-String botCommandsHolder = BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMANDS_RANDOM BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES                      BOT_COMMANDS_COLLAR ;
-String botCommandsGuest  = BOT_COMMANDS_GENERAL                                                             BOT_COMMANDS_ROLES                      BOT_COMMANDS_COLLAR ;
-String botCommandsTeaser = BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS                                         BOT_COMMANDS_ROLES                      BOT_COMMANDS_COLLAR ;
+String botCommandsAll =     BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS                                          BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES BOT_COMMANDS_WAITING BOT_COMMANDS_CAPTURE ;
+String botCommandsWearer =  BOT_COMMANDS_GENERAL                                                              BOT_COMMANDS_UNLOCK                    BOT_COMMANDS_WAITING                      ;
+String botCommandsHolder =  BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMANDS_RANDOM BOT_COMMANDS_TEASING BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES                      BOT_COMMANDS_CAPTURE ;
+String botCommandsGuest =   BOT_COMMANDS_GENERAL                                                                                  BOT_COMMANDS_ROLES                      BOT_COMMANDS_CAPTURE ;
+String botCommandsTeaser =  BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS                                                              BOT_COMMANDS_ROLES                      BOT_COMMANDS_CAPTURE ;
+String botCommandsAllHelp = BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS                                          BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES BOT_COMMANDS_WAITING BOT_COMMANDS_CAPTURE BOT_COMMANDS_EMERGENCY ;
 
 
 /*
@@ -56,10 +60,10 @@ users - Lists users in chat
 holder - Adopt holder role
 teaser - Adopt teaser role
 guest - Adopt guest role
-waiting - Make wearer waiting to be collared by the holder
-free - Make wearer free again (stops waiting for collaring)
-collar - Collar and capture wearer as a sub
-release - Release wearer as a sub (open collar)
+waiting - Make wearer waiting to be captured by the holder
+free - Make wearer free again (stops waiting for capturing by the holder)
+capture - Capture wearer as a sub
+release - Release wearer as a sub
  */
 
 
@@ -82,7 +86,7 @@ void Message::Init()
   session.SetTimeOfLastClosing(timeFunc.GetTimeInSeconds());
 
   int index;
-  index = users.AddUser(USER_ID_CHARLY, "Charly", ROLE_WEARER_FREE);
+  index = users.AddUser(USER_ID_WEARER, USER_NAME_WEARER, ROLE_WEARER_FREE);
   users.SetWearerIndex(index);
 
   index = users.AddUser(USER_ID_BOT, "Ruler", ROLE_SHOCKCELL);
@@ -223,24 +227,43 @@ void Message::MessageState(String chatId)
 
 
 // ------------------------------------------------------------------------
-void Message::ShockAction(String chatId, int count, long milliseconds)
+void Message::ShockAction(String fromId, String chatId, int count, long milliseconds)
 {
-  String msg = "Shock processing for " + String((milliseconds / 1000), DEC) + " s begins...";
-  session.SetTimeOfLastShock(timeFunc.GetTimeInSeconds());
-  UpdateChatDescription();
-  SendMessage(msg, chatId);
+  User *u = users.GetUserFromId(fromId);
+  String msg;
 
-  session.Shock(count, milliseconds);  
+  if (u)
+  {
+    if (u->IsHolder() ||
+        u->IsBot() ||
+        (u->IsTeaser() && session.IsTeasingMode()))
+    {
+      String msg = "Shock processing for " + String((milliseconds / 1000), DEC) + " s begins...";
+      SendMessage(msg, chatId);
+      session.SetTimeOfLastShock(timeFunc.GetTimeInSeconds());
+      UpdateChatDescription();
 
-  msg = "Shock processing completed. :-)";
-  SendMessage(msg, chatId);
-  UpdateChatDescription();
+      session.Shock(count, milliseconds);  
+
+      msg = "Shock processing completed. :-)";
+      SendMessage(msg, chatId);
+      UpdateChatDescription();
+    }
+    else
+    {
+      String msg = "Request denied. Only the holder";
+      if (session.IsTeasingMode())
+        msg += " and the teasers";
+      msg += " are allowed to execute shock punishments.";
+      SendMessage(msg, chatId);
+    }
+  }
 }
 
 
 
-#define COMMON_MSG_WAITING "The holder can capture him with the /collar command."
-#define COMMON_MSG_COLLAR "He is now securely locked and lost his permissions to open the key safe. The key safe can only be operated by the holder using the /unlock command.\nFurthermore, the wearer can now be punished with shocks."
+#define COMMON_MSG_WAITING " The holder can capture him with the /capture command."
+#define COMMON_MSG_CAPTURE " He is now securely locked and lost his permissions to open the key safe. The key safe can only be operated by the holder using the /unlock command.\nFurthermore, the wearer can now be punished with shocks."
 
 
 // ------------------------------------------------------------------------
@@ -252,7 +275,7 @@ void Message::WaitingAction(String fromId, String chatId)
   if (users.GetUserFromId(fromId)->IsFreeWearer())
   {
     users.GetWearer()->SetRoleId(ROLE_WEARER_WAITING);
-    msg = "Wearer " + users.GetWearerName() + " is now exposed and waiting to be collared by the holder." COMMON_MSG_WAITING;
+    msg = "Wearer " + users.GetWearerName() + " is now exposed and waiting to be captured by the holder." COMMON_MSG_WAITING;
     SendMessage(msg, chatId);
     UpdateChatDescription();
   }
@@ -262,15 +285,15 @@ void Message::WaitingAction(String fromId, String chatId)
     msg = "Wearer " + users.GetWearerName() + " is already waiting for capture by the holder." COMMON_MSG_WAITING;
     SendMessage(msg, chatId);
   }
-  // does request comes from collared wearer?
-  else if (users.GetUserFromId(fromId)->IsCollaredWearer())
+  // does request comes from captured wearer?
+  else if (users.GetUserFromId(fromId)->IsCapturedWearer())
   {
-    msg = "Wearer " + users.GetWearerName() + " is already collared and captured by the holder.";
+    msg = "Wearer " + users.GetWearerName() + " is already captured by the holder.";
     SendMessage(msg, chatId);
   }
   else
   {
-    msg = "Only the free wearer can use the command /waiting to make himself available for collaring by a holder.";
+    msg = "Only the free wearer can use the command /waiting to make himself available for capturing by a holder.";
     SendMessage(msg, chatId);
   }
 }
@@ -285,7 +308,7 @@ void Message::FreeAction(String fromId, String chatId)
   if (users.GetUserFromId(fromId)->IsWaitingWearer())
   {
     users.GetWearer()->SetRoleId(ROLE_WEARER_FREE);
-    msg = "Wearer " + users.GetWearerName() + " is now free and cannot be collared by the holder.";
+    msg = "Wearer " + users.GetWearerName() + " is now free and cannot be captured by the holder.";
     SendMessage(msg, chatId);
     UpdateChatDescription();
   }
@@ -295,10 +318,10 @@ void Message::FreeAction(String fromId, String chatId)
     msg = "Wearer " + users.GetWearerName() + " is already free.";
     SendMessage(msg, chatId);
   }
-  // does request comes from collared wearer?
-  else if (users.GetUserFromId(fromId)->IsCollaredWearer())
+  // does request comes from captured wearer?
+  else if (users.GetUserFromId(fromId)->IsCapturedWearer())
   {
-    msg = "Request is denied! Wearer " + users.GetWearerName() + " is collared and captured by the holder. He must be released by the holder to get free.";
+    msg = "Request is denied! Wearer " + users.GetWearerName() + " is captured by the holder. He must be released by the holder to get free.";
     SendMessage(msg, chatId);
   }
   else
@@ -310,18 +333,18 @@ void Message::FreeAction(String fromId, String chatId)
 
 
 // ------------------------------------------------------------------------
-void Message::CollarAction(String fromId, String chatId)
+void Message::CaptureAction(String fromId, String chatId)
 {
   String msg;
   if (users.GetUserFromId(fromId)->IsHolder() ||
-      (!users.GetHolder() && users.GetUserFromId(fromId)->MayBecomeHolder()))
+      (! users.GetHolder() && users.GetUserFromId(fromId)->MayBecomeHolder()))
   {
     // request is from holder
     // or from other user when there is no holder present yet
     if (users.GetWearer()->IsWaitingWearer())
     {
-      users.GetWearer()->SetRoleId(ROLE_WEARER_COLLARED);
-      msg = "Collaring wearer " + users.GetWearerName() + " now. " COMMON_MSG_COLLAR;
+      users.GetWearer()->SetRoleId(ROLE_WEARER_CAPTURED);
+      msg = "Capturing wearer " + users.GetWearerName() + " now." COMMON_MSG_CAPTURE;
       // Make requestor a holder if necessary
       if (! users.GetUserFromId(fromId)->IsHolder())
       {
@@ -330,19 +353,22 @@ void Message::CollarAction(String fromId, String chatId)
       }
       UpdateChatDescription();
     }
-    else if (users.GetWearer()->IsCollaredWearer())
+    else if (users.GetWearer()->IsCapturedWearer())
     {
-      msg = "Wearer " + users.GetWearerName() + " is already collared. " COMMON_MSG_COLLAR;
+      msg = "Wearer " + users.GetWearerName() + " is already captured." COMMON_MSG_CAPTURE;
     }
     else
     {
-      msg = "Wearer " + users.GetWearerName() + " is currently not waiting to get collared. The wearer must send the /waiting command to await collaring and getting captured.";
+      msg = "Wearer " + users.GetWearerName() + " is currently not waiting to get captured. The wearer must send the /waiting command to await capture by the holder.";
     }
     SendMessage(msg, chatId);
   }
   else
   {
-    SendMessage("You currently have no permission to collar the wearer. Guests may collar the wearer only, if there is no current holder.", chatId);
+    if (users.GetWearer()->IsFreeWearer())
+      SendMessage("You currently cannot capture the wearer, because he has not made himself available. The wearer must be waiting for capture using the /waiting command.", chatId);
+    else
+      SendMessage("You currently have no permission to capture the wearer. Guests may capture the wearer only, if there is no current holder.", chatId);
   }
 }
 
@@ -354,7 +380,7 @@ void Message::ReleaseAction(String fromId, String chatId)
   if (users.GetUserFromId(fromId)->IsHolder())
   {
     // request is from holder
-    if (users.GetWearer()->IsCollaredWearer())
+    if (users.GetWearer()->IsCapturedWearer())
     {
       users.GetWearer()->SetRoleId(ROLE_WEARER_WAITING);
       msg = "Releasing wearer " + users.GetWearerName() + ". He is now released and received back his permissions to open the key safe.\n";
@@ -362,13 +388,13 @@ void Message::ReleaseAction(String fromId, String chatId)
     }
     else
     {
-      msg = "Wearer " + users.GetWearerName() + " is currently not collared and there is no need to release him.";
+      msg = "Wearer " + users.GetWearerName() + " is currently not captured and there is no need to release him.";
     }
     SendMessage(msg, chatId);
   }
   else
   {
-    if (users.GetUserFromId(fromId)->IsCollaredWearer())
+    if (users.GetUserFromId(fromId)->IsCapturedWearer())
       SendMessage("The wearer cannot free himself. Only the holder may release the wearer.", chatId);
     else
       SendMessage("You currently have no permission to release the wearer. Only the holder may release the wearer.", chatId);
@@ -377,7 +403,7 @@ void Message::ReleaseAction(String fromId, String chatId)
 
 
 // ------------------------------------------------------------------------
-void Message::UnlockAction(String fromId, String chatId)
+void Message::UnlockAction(String fromId, String chatId, bool force)
 {
   Serial.println("*** Message::UnlockAction()");
   Serial.print("- free: ");
@@ -389,27 +415,29 @@ void Message::UnlockAction(String fromId, String chatId)
 
   // from wearer & wearer is free
   // from holder
-  if (session.IsActiveChastikeySession())
+  if (session.IsActiveChastikeySession() && ! force)
   {
-    SendMessage("Unlock request is denied! Wearer is locked in an active ChastiKey session.", chatId);
+    SendMessageAll("Unlock request is denied! Wearer is locked in an active ChastiKey session.", chatId);
   }
-  else if (users.GetUserFromId(fromId)->MayUnlock())
+  else if (users.GetUserFromId(fromId)->MayUnlock() || force)
   {
-    SendMessage("Key safe is unlocking now for 4 seconds and may be opened during this period.", chatId);
+    if (force)
+      SendMessageAll("An emergency release request has been granted.", chatId);
+    SendMessageAll("Key safe is unlocking now for 4 seconds and may be opened during this period.", chatId);
     session.Unlock();
     // check state of the safe afterwards
     coverState = digitalRead(COVER_OPEN_PIN);
     if (coverState == COVER_OPEN)
     {
-      SendMessage("Key safe has been opened.", chatId);
+      SendMessageAll("Key safe has been opened.", chatId);
       UpdateChatDescription();
     }
     else
-      SendMessage("Key safe is locked again and has not been opened.", chatId);
+      SendMessageAll("Key safe is locked again and has not been opened.", chatId);
   }
   else
   {
-    SendMessage("You have no permission to unlock. Only the free wearer or the holder may unlock the key safe.", chatId);
+    SendMessageAll("You have no permission to unlock. Only the free wearer or the holder may unlock the key safe.", chatId);
   }
 }
 
@@ -424,13 +452,17 @@ void Message::HolderAction(String fromId, String chatId)
   {
     u->SetRoleId(ROLE_HOLDER);
     msg = "User " + users.GetUserFromId(fromId)->GetName() + " has now holder permissions.";
+    msg += "The holder can use the following commands:\n" + botCommandsHolder;
     SendMessage(msg, chatId);
     UpdateChatDescription();
   }
   else
   {
     if (u->IsHolder())
+    {
       msg = "User " + users.GetUserFromId(fromId)->GetName() + " is already holder.";
+      msg += "The holder can use the following commands:\n" + botCommandsHolder;
+    }
     else
       msg = "User " + users.GetUserFromId(fromId)->GetName() + " has no permission to become holder.";
     if (u->IsWearer())
@@ -452,7 +484,7 @@ void Message::TeaserAction(String fromId, String chatId)
     if (u->IsHolder())
     {
       users.GetWearer()->SetRoleId(ROLE_WEARER_WAITING);
-      msg += " Since user " + users.GetUserFromId(fromId)->GetName() + " has given up the holder role, the wearer " + users.GetWearer()->GetName() + " is no longer collared. He is now released and received back his permissions to open the key safe.";
+      msg += " Since user " + users.GetUserFromId(fromId)->GetName() + " has given up the holder role, the wearer " + users.GetWearer()->GetName() + " is no longer captured. He is now released and received back his permissions to open the key safe.";
     }
     u->SetRoleId(ROLE_TEASER);
     SendMessage(msg, chatId);
@@ -462,6 +494,24 @@ void Message::TeaserAction(String fromId, String chatId)
   {
     msg = "User " + users.GetUserFromId(fromId)->GetName() + " has no permission to become teaser.";
     SendMessage(msg, chatId);
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Message::TeasingModeAction(bool mode, String fromId, String chatId)
+{
+  if (users.GetHolder()->GetId() == fromId)
+  {
+    session.SetTeasingMode(mode);
+    if (mode)
+      SendMessage("Teasing mode is now activated. Users with teaser role can now support the holder with treatments like /shock_5.", chatId);
+    else
+      SendMessage("Teasing mode is now switched off. Only the holder has the permission to treat the wearer with shocks.", chatId);
+  }
+  else
+  {
+    SendMessage("Request denied. Only the holder has the permission to control the rights for users with the teaser role.", chatId);
   }
 }
 
@@ -478,7 +528,7 @@ void Message::GuestAction(String fromId, String chatId)
     if (u->IsHolder())
     {
       users.GetWearer()->SetRoleId(ROLE_WEARER_WAITING);
-      msg += " Since user " + users.GetUserFromId(fromId)->GetName() + " has given up the holder role, the wearer " + users.GetWearer()->GetName() + " is no longer collared. He is now released and received back his permissions to open the key safe.";
+      msg += " Since user " + users.GetUserFromId(fromId)->GetName() + " has given up the holder role, the wearer " + users.GetWearer()->GetName() + " is no longer captured. He is now released and received back his permissions to open the key safe.";
     }
     u->SetRoleId(ROLE_GUEST);
     SendMessage(msg, chatId);
@@ -549,6 +599,19 @@ void Message::RandomShockModeAction(String commandParameter, String fromId, Stri
 }
 
 
+// ------------------------------------------------------------------------
+void Message::EmergencyAction(String fromId, String chatId)
+{
+  if (users.GetWearer()->GetId() == fromId)
+  {
+    session.SetEmergencyReleaseCounterRequest(true);
+    SendMessageAll("An emergency release request has been received and will be processed within 5 minutes.", chatId);
+  }
+  else
+    SendMessage("Only the wearer may request for emergency release.", chatId);
+}
+
+
 // -------------------------------------------------
 void Message::UnknownCommand(String chatId)
 {
@@ -603,7 +666,7 @@ void Message::ProcessNewMessages()
         welcome += "Commands for the ";
         switch (users.GetUserFromId(from_id)->GetRoleId())
         {
-          case ROLE_WEARER_COLLARED:
+          case ROLE_WEARER_CAPTURED:
           case ROLE_WEARER_WAITING:
           case ROLE_WEARER_FREE:
             welcome += "wearer:\n" + botCommandsWearer;
@@ -621,15 +684,15 @@ void Message::ProcessNewMessages()
         SendMessage(welcome, chat_id);
       }
       else if (text == "/shock1")
-        ShockAction(chat_id, 1, 1000);
+        ShockAction(from_id, chat_id, 1, 1000);
       else if (text == "/shock3")
-        ShockAction(chat_id, 1, 3000);
+        ShockAction(from_id, chat_id, 1, 3000);
       else if (text == "/shock5")
-        ShockAction(chat_id, 1, 5000);
+        ShockAction(from_id, chat_id, 1, 5000);
       else if (text == "/shock10")
-        ShockAction(chat_id, 1, 10000);
+        ShockAction(from_id, chat_id, 1, 10000);
       else if (text == "/shock30")
-        ShockAction(chat_id, 1, 30000);
+        ShockAction(from_id, chat_id, 1, 30000);
       else if (text == "/state")
       {
         session.InfoChastikey();
@@ -645,12 +708,16 @@ void Message::ProcessNewMessages()
         HolderAction(from_id, chat_id);
       else if (text == "/teaser")
         TeaserAction(from_id, chat_id);
+      else if (text == "/teasing_on")
+        TeasingModeAction(true, from_id, chat_id);
+      else if (text == "/teasing_off")
+        TeasingModeAction(false, from_id, chat_id);
       else if (text == "/guest")
         GuestAction(from_id, chat_id);
       else if (text == "/waiting")
         WaitingAction(from_id, chat_id);
-      else if (text == "/collar")
-        CollarAction(from_id, chat_id);
+      else if (text == "/capture")
+        CaptureAction(from_id, chat_id);
       else if (text == "/release")
         ReleaseAction(from_id, chat_id);
       else if (text == "/free")
@@ -659,6 +726,8 @@ void Message::ProcessNewMessages()
         RandomShockModeAction(text.substring(8), from_id, chat_id);
 //      else if (text == "/restrict")
 //        RestrictUserAction(from_id, chat_id);
+      else if (text == "/thisisanemergency")
+        EmergencyAction(from_id, chat_id);
       else if (text.substring(0, 1) == "/")
         UnknownCommand(chat_id);
       else
@@ -677,6 +746,15 @@ void Message::SendMessage(String msg, String chatId)
   Serial.print("> ");
   Serial.println(msg);
   bot.sendMessage(chatId, msg, "");
+}
+
+
+// -------------------------------------------------
+void Message::SendMessageAll(String msg, String chatId)
+{
+  SendMessage(msg, chatId);
+  if (chatId != GROUP_CHAT_ID)
+    SendMessage(msg, GROUP_CHAT_ID);
 }
 
 

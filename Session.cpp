@@ -307,7 +307,7 @@ void Session::ProcessRandomShocks()
     if (timeOfNextScheduledShock < timeFunc.GetTimeInSeconds())
     {
       // execute random shock
-      message.ShockAction(GROUP_CHAT_ID, 1, 1000);
+      message.ShockAction(users.GetBot()->GetId(), GROUP_CHAT_ID, 1, 1000);
       // and schedule the next one
       ScheduleNextRandomShock();
     }

@@ -81,7 +81,13 @@
 // TELEGRAM
 
 #define BOT_REQUEST_INTERVAL 1000
-#define CHAT_ID "TELEGRAM_CHAT_ID"
+#define GROUP_CHAT_ID "TELEGRAM_CHAT_ID_FOR_GROUP"
+#define USER_ID_BOT "TELEGRAM_ID_BOT"
+// Initialize Telegram bot
+// your bot token (from Botfather)
+#define BOT_TOKEN "YOUR_BOT_TOKEN"
+#define USER_ID_WEARER "TELEGRAM_USER_ID_WEARER"
+#define USER_NAME_WEARER "TELEGRAM_USER_NAME_WEARER"
 
 // ---------------------------------
 // CHASTIKEY

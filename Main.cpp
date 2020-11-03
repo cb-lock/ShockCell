@@ -164,6 +164,25 @@ void loop()
       msg = "Good morning "  + users.GetWearer()->GetName() + ", wake up boy!";
       message.SendMessage(msg);
     }
+
+    if (session.GetEmergencyReleaseCounterRequest())
+    {
+      session.SetEmergencyReleaseCounter(session.GetEmergencyReleaseCounter() + 1);
+      if (session.GetEmergencyReleaseCounter() < 2)
+        message.SendMessageAll("The first emergency release request has been accepted, but it needs to be raised again for confirmation.");
+      else
+        message.UnlockAction(users.GetWearer()->GetId(), GROUP_CHAT_ID, FORCE);
+    }
+    else
+    {
+      if (session.GetEmergencyReleaseCounter() > 0)
+      {
+        session.SetEmergencyReleaseCounter(0);
+        message.SendMessage("The emergency request has not been confirmed and is cleared now.");
+      }
+    }
+    session.SetEmergencyReleaseCounterRequest(false);
+
     session.SetTimeOfLast5minInterval(timeFunc.GetTimeInSeconds());
   }
 }

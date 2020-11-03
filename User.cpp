@@ -25,7 +25,7 @@ bool User::SetRoleId(int r, bool force)
   {
     case ROLE_WEARER_FREE:
     case ROLE_WEARER_WAITING:
-    case ROLE_WEARER_COLLARED:
+    case ROLE_WEARER_CAPTURED:
       // check other users
       // if current user is the wearer or if current user may be turned into one...
       if (force ||
@@ -44,20 +44,22 @@ bool User::SetRoleId(int r, bool force)
       {
         roleId = r;
         // get index of current user
-        int index = userSet->GetIndexFromId(GetId());
-        userSet->SetHolderIndex(index);
+        userSet->SetHolderIndex(userSet->GetIndexFromId(GetId()));
         return true;
       }
       else
         return false;
       break;
     case ROLE_SHOCKCELL:
+      roleId = r;
+      userSet->SetBotIndex(userSet->GetIndexFromId(GetId()));
+      return true;
+      break;
     case ROLE_TEASER:
     case ROLE_GUEST:
     default:
-      if (GetRoleId() == ROLE_HOLDER)
-        userSet->SetHolderIndex(USER_NONE);
       roleId = r;
+      return true;
       break;
   }
 }

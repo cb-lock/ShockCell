@@ -7,18 +7,11 @@
 #include "Defs.h"
 
 
-#define USER_ID_BOT "1264046045"
-#define USER_ID_CHARLY "1157999292"
-#define GROUP_CHAT_ID "-1001300311525"
-
-// Initialize Telegram bot
-// your bot token (from Botfather)
-#define BOT_TOKEN "1264046045:AAEk49lP6viWTAkZ0jItDas5Y_03ZjoPPMg"
 
 #define KEEP_TIMESTAMP false
 #define UPDATE_TIMESTAMP true
 
-#define ROLE_WEARER_COLLARED 0
+#define ROLE_WEARER_CAPTURED 0
 #define ROLE_WEARER_WAITING 1
 #define ROLE_WEARER_FREE 2
 #define ROLE_HOLDER 3
@@ -54,7 +47,7 @@ public:
 class RoleSet
 {
 protected:
-  Role roleInfo[ROLE_COUNT] = { { 0, "Wearer/collared" }, { 1, "Wearer/waiting" }, { 2, "Wearer/free" }, { 3, "Holder" }, { 4, "ShockCell" }, { 5, "Teaser" }, { 6, "Guest" } };
+  Role roleInfo[ROLE_COUNT] = { { 0, "Wearer/captured" }, { 1, "Wearer/waiting" }, { 2, "Wearer/free" }, { 3, "Holder" }, { 4, "ShockCell" }, { 5, "Teaser" }, { 6, "Guest" } };
 
 public:
   RoleSet() {}
@@ -92,12 +85,12 @@ public:
   void SetBot(bool is=true);
   bool IsHolder() { return roleId == ROLE_HOLDER; }
   bool SetHolder() { SetRoleId(ROLE_HOLDER); }
-  bool IsWearer() { return (roleId >= ROLE_WEARER_COLLARED) && (roleId <= ROLE_WEARER_FREE); }
+  bool IsWearer() { return (roleId >= ROLE_WEARER_CAPTURED) && (roleId <= ROLE_WEARER_FREE); }
   bool IsTeaser() { return roleId == ROLE_TEASER; }
   bool IsGuest() { return roleId == ROLE_GUEST; }
   bool IsFreeWearer() { return roleId == ROLE_WEARER_FREE; }
   bool IsWaitingWearer() { return roleId == ROLE_WEARER_WAITING; }
-  bool IsCollaredWearer() { return roleId == ROLE_WEARER_COLLARED; }
+  bool IsCapturedWearer() { return roleId == ROLE_WEARER_CAPTURED; }
   bool MayBecomeWearer() { return (IsWearer() || IsTeaser() || IsGuest()); }
   bool MayBecomeTeaser() { return (IsHolder() || IsTeaser() || IsGuest()); }
   bool MayBecomeHolder();
@@ -124,11 +117,12 @@ protected:
   int count;
   int wearerIndex;
   int holderIndex;
+  int botIndex;
   User user[USER_CACHE_SIZE];
   unsigned long lastMessageTime;
 
 public:
-  UserSet() : count(0), wearerIndex(-1), holderIndex(-1) {}
+  UserSet() : count(0), wearerIndex(-1), holderIndex(-1), botIndex(-1) {}
   int GetCount() { return count; }
   User * GetUser(int i) { return &user[i]; }
   User * GetUserFromIndex(int i);
@@ -137,12 +131,14 @@ public:
   int GetIndexFromId(String id);
   User * GetWearer() { return GetUserFromIndex(wearerIndex); }
   User * GetHolder() { return GetUserFromIndex(holderIndex); }
+  User * GetBot() { return GetUserFromIndex(botIndex); }
   int GetWearerIndex() { return wearerIndex; }
   String GetWearerName() { return user[wearerIndex].GetName(); }
   void SetWearerIndex(int i) { wearerIndex = i; }
   int GetHolderIndex() { return holderIndex; }
   String GetHolderName() { return user[holderIndex].GetName(); }
   void SetHolderIndex(int i) { holderIndex = i; }
+  void SetBotIndex(int i) { botIndex = i; }
   int AddUser(String id, String name="", int role=ROLE_GUEST, bool isBot=false);
   unsigned long LastMessageTime() { return lastMessageTime; }
   void SetLastMessageTime(unsigned long now) { lastMessageTime = now; }

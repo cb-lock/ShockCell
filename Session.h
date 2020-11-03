@@ -20,12 +20,15 @@ private:
 //  User supervisor;
   bool activeChastikeySession = false;
   bool randomShockMode = false;
+  bool teasingMode = false;
   unsigned long randomShocksPerHour = 1;
   String chastikeyHolder;
   unsigned long endTime;
   String endTimeStr;
   bool elapsedTimeDisplay;
   String releaseCode;
+  int emergencyReleaseCounter = 0;
+  bool emergencyReleaseCounterRequest = false;
   unsigned long timeOfLastUnlock = 0;
   unsigned long timeOfLastOpening = 0;
   unsigned long timeOfLastClosing = 0;
@@ -81,6 +84,14 @@ public:
   void SetEndTimeStr(String t) { endTimeStr = t; }
   String GetReleaseCode() { return releaseCode; }
   void SetReleaseCode(String c) { releaseCode = c; }
+
+  void SetTeasingMode(bool mode) { teasingMode = mode; }
+  bool IsTeasingMode() { return teasingMode; }
+
+  void SetEmergencyReleaseCounter(int newVal) { emergencyReleaseCounter = newVal; emergencyReleaseCounterRequest = false; }
+  int GetEmergencyReleaseCounter() { return emergencyReleaseCounter; }
+  void SetEmergencyReleaseCounterRequest(bool req) { emergencyReleaseCounterRequest = req; }
+  bool GetEmergencyReleaseCounterRequest() { return emergencyReleaseCounterRequest; }
 
   void Punishment(int level);
   void Shock(int count, long milliseconds);
