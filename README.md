@@ -40,6 +40,18 @@ The ShockCell key safe knows four different roles in the group chat.
 3. Guest - additional people in the group chat without special rights
 4. Teaser - additional people who support the holder with the rights to send shocks to the wearer.
 
+Every member in the group chat can have only one role. However, roles can be changed.
+
+#### Rules for role changes
+
+- The wearer cannot change roles.
+
+- A guest may become holder if there is currently no holder.
+- The holder can become guest and give up his privileges
+
+- A guest may become teaser.
+- A teaser can become guest and give up his privileges
+
 ### Start communication/overview
 
 #### /start
