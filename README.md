@@ -35,12 +35,14 @@ The ShockCell key safe runs a bot for the Telegram Messenger App. The bot is the
 
 The ShockCell key safe knows four different roles in the group chat.
 
-1. Wearer - the person being controlled and wearing a chastity device with a lock and shock device.
-2. Holder - the person controlling (holding) the key safe storing the keys to that lock. She/he also controls the shocks for the wearer.
+1. Wearer - the one person being controlled and wearing a chastity device with a lock and shock device.
+2. Holder - the one person controlling (holding) the key safe storing the keys to that lock. She/he also controls the shocks for the wearer.
+3. Guest - additional people in the group chat without special rights
+4. Teaser - additional people who support the holder with the rights to send shocks to the wearer.
 
 ### Start communication/overview
 
-/start
+#### /start
 
 The /start command lists all commands available for the role 
 
