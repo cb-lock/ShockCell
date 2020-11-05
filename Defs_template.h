@@ -90,6 +90,10 @@
 #define USER_NAME_WEARER "TELEGRAM_USER_NAME_WEARER"
 
 // ---------------------------------
+// IFTTT
+#define IFTTT_API_KEY "IFTTT_API_KEY"
+
+// ---------------------------------
 // CHASTIKEY
 
 #define CHASTIKEY_USER_ID "CHASTIKEY_USER_ID"
