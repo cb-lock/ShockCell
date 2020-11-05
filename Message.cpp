@@ -67,6 +67,13 @@ release - Release wearer as a sub
  */
 
 
+#define COMMON_MSG_WAITING " The holder can capture him with the /capture command."
+#define COMMON_MSG_CAPTURE " He is now securely locked and lost his permissions to open the key safe. The key safe can only be operated by the holder using the /unlock command.\nFurthermore, the wearer can now be punished with shocks."
+#define COMMON_MSG_TEASING_ON "Teasing mode is activated. Users with teaser role can now support the holder with treatments like /shock_5."
+#define COMMON_MSG_TEASING_OFF "Teasing mode is switched off. Only the holder has the permission to treat the wearer with shocks."
+#define COMMON_MSG_RANDOM_ON "Random mode is activated. The wearer receives random shocks as defined by the holder."
+#define COMMON_MSG_RANDOM_OFF "Random mode is switched off."
+
 
 // ------------------------------------------------------------------------
 Message::Message()
@@ -163,6 +170,24 @@ void Message::MessageCoverState(String chatId)
 
 
 // ------------------------------------------------------------------------
+void Message::MessageModes(String chatId)
+{
+  String msg;
+  if (session.IsTeasingMode())
+    msg = COMMON_MSG_TEASING_ON;
+  else
+    msg = COMMON_MSG_TEASING_OFF;
+
+  if (session.IsRandomMode())
+    msg += COMMON_MSG_RANDOM_ON;
+  else
+    msg += COMMON_MSG_RANDOM_OFF;
+
+  SendMessage(msg, chatId);
+}
+
+
+// ------------------------------------------------------------------------
 void Message::MessageUsers(String chatId)
 {
   int i = 0;
@@ -221,6 +246,7 @@ void Message::MessageState(String chatId)
 {
   MessageLastShock(chatId);
   MessageCoverState(chatId);
+  MessageModes(chatId);
   MessageUsers(chatId);
   MessageChastikeyState(chatId);
 }
@@ -259,11 +285,6 @@ void Message::ShockAction(String fromId, String chatId, int count, long millisec
     }
   }
 }
-
-
-
-#define COMMON_MSG_WAITING " The holder can capture him with the /capture command."
-#define COMMON_MSG_CAPTURE " He is now securely locked and lost his permissions to open the key safe. The key safe can only be operated by the holder using the /unlock command.\nFurthermore, the wearer can now be punished with shocks."
 
 
 // ------------------------------------------------------------------------
@@ -415,6 +436,8 @@ void Message::UnlockAction(String fromId, String chatId, bool force)
 
   // from wearer & wearer is free
   // from holder
+  session.InfoChastikey();
+
   if (session.IsActiveChastikeySession() && ! force)
   {
     SendMessageAll("Unlock request is denied! Wearer is locked in an active ChastiKey session.", chatId);
@@ -505,9 +528,9 @@ void Message::TeasingModeAction(bool mode, String fromId, String chatId)
   {
     session.SetTeasingMode(mode);
     if (mode)
-      SendMessage("Teasing mode is now activated. Users with teaser role can now support the holder with treatments like /shock_5.", chatId);
+      SendMessage(COMMON_MSG_TEASING_ON, chatId);
     else
-      SendMessage("Teasing mode is now switched off. Only the holder has the permission to treat the wearer with shocks.", chatId);
+      SendMessage(COMMON_MSG_TEASING_OFF, chatId);
   }
   else
   {
@@ -583,7 +606,7 @@ void Message::RandomShockModeAction(String commandParameter, String fromId, Stri
         if (shocksPerHour > 0)
         {
           session.SetRandomMode(true, shocksPerHour);
-          SendMessage("Switching random mode on with " + commandParameter + " shocks per hour on average. This remains active until it is switched off or sleeping time of wearer " + users.GetWearer()->GetName() + " begins.", chatId);
+          SendMessage("Switching random mode on with " + commandParameter + " shocks per hour on average. This remains active until it is switched off or sleeping time of the wearer " + users.GetWearer()->GetName() + " begins.", chatId);
         }
         else
         {

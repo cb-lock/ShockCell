@@ -35,7 +35,7 @@ void Session::Shock(int count, long milliseconds)
     bool success = false;
     while ((trial < 10) && ! success)
     {
-      success = emlaServer.WPost("https://maker.ifttt.com/trigger/s_received/with/key/2ONo1D18q28kdbCU-6zNT", request, payload, true);
+      success = emlaServer.WPost("https://maker.ifttt.com/trigger/s_received/with/key/" IFTTT_API_KEY, request, payload, true);
       trial++;
       if (trial > 1)
       {

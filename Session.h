@@ -20,7 +20,7 @@ private:
 //  User supervisor;
   bool activeChastikeySession = false;
   bool randomShockMode = false;
-  bool teasingMode = false;
+  bool teasingMode = true;
   unsigned long randomShocksPerHour = 1;
   String chastikeyHolder;
   unsigned long endTime;
@@ -87,6 +87,8 @@ public:
 
   void SetTeasingMode(bool mode) { teasingMode = mode; }
   bool IsTeasingMode() { return teasingMode; }
+  void SetRandomMode(bool onOff, int shocksPerHour=1);
+  bool IsRandomMode() { return randomShockMode; }
 
   void SetEmergencyReleaseCounter(int newVal) { emergencyReleaseCounter = newVal; emergencyReleaseCounterRequest = false; }
   int GetEmergencyReleaseCounter() { return emergencyReleaseCounter; }
@@ -95,7 +97,6 @@ public:
 
   void Punishment(int level);
   void Shock(int count, long milliseconds);
-  void SetRandomMode(bool onOff, int shocksPerHour=1);
   void Lock();
   void ForcedUnlock();
   void Unlock();

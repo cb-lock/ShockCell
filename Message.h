@@ -32,6 +32,7 @@ public:
   void MessageIsOpen(String chatId);
   void MessageCoverStateChange(String chatId=GROUP_CHAT_ID);
   void MessageCoverState(String chatId=GROUP_CHAT_ID);
+  void MessageModes(String chatId=GROUP_CHAT_ID);
   void MessageUsers(String chatId=GROUP_CHAT_ID);
   void MessageRoles(String chatId=GROUP_CHAT_ID);
   void MessageChastikeyState(String chatId=GROUP_CHAT_ID);
