@@ -1,4 +1,6 @@
+#ifdef ESP32
 #include "esp32-hal-ledc.h"
+#endif
 #include "Oled.h"
 #include "Defs.h"
 #include "TimeF.h"
@@ -44,11 +46,13 @@ void setup()
   // OLED
   oledDisplay.Init();
 
-  // servo
+  // servo only supported for ESP32
+#ifdef ESP32
   // channel 1, 50 Hz, 16 bit width
   ledcSetup(1, 50, 16);
   // GPIO 2 attached to channel 1
   ledcAttachPin(SERVO_PIN, 1);
+#endif
 
   // --------------------------------------------------------------------------
   // WiFi connection

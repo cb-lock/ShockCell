@@ -26,7 +26,9 @@
  */
 
 #include <Arduino.h>
+#ifdef ESP32
 #include <esp32-hal-log.h>  
+#endif
 
 #ifdef HTTPCLIENT_1_1_COMPATIBLE
 #include <WiFi.h>
@@ -73,9 +75,11 @@ public:
     bool verify(WiFiClient& client, const char* host) override
     {
          WiFiClientSecure& wcs = static_cast<WiFiClientSecure&>(client);
+#ifdef ESP32
          wcs.setCACert(_cacert);
          wcs.setCertificate(_clicert);
          wcs.setPrivateKey(_clikey);
+#endif
          return true;
     }
 

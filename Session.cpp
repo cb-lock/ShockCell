@@ -90,6 +90,8 @@ void Session::Lock()
 // ------------------------------------------------------------------------
 void Session::ForcedUnlock()
 {
+  // servo only supported for ESP32
+#ifdef ESP32
   oledDisplay.PrintDisplay("Unlock GRANTED!");
   ledcAttachPin(SERVO_PIN, 1);
   delay(50);
@@ -100,6 +102,7 @@ void Session::ForcedUnlock()
   ledcWrite(1, 999);
   delay(500);
   ledcDetachPin(SERVO_PIN);
+#endif
 }
 
 

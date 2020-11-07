@@ -24,7 +24,7 @@ bool EmlaServer::Connect2WiFi(const char *ssid, const char *password, int timeou
   Serial.print("Attempting to connect to SSID: ");
   Serial.println(ssid);
 #ifdef ESP8266
-  WiFi.setInsecure();
+//  WiFi.setInsecure();
 #endif
   WiFi.begin(ssid, password);
 
