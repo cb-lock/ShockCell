@@ -228,7 +228,7 @@ void Message::MessageChastikeyState(String chatId)
   }
   else
   {
-    msg = "Wearer " + users.GetWearer()->GetName() + " is not locked in a ChastiKey session.";
+//    msg = "Wearer " + users.GetWearer()->GetName() + " is not locked in a ChastiKey session.";
   }
   SendMessage(msg, chatId);
 }
