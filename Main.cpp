@@ -127,7 +127,7 @@ void loop()
   {
     oledDisplay.PrintDisplay();
     message.MessageCoverStateChange();
-    message.UpdateChatDescription();
+    message.WriteCommandsAndSettings();
     oldCoverState = coverState;
   }
 

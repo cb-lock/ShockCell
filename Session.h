@@ -21,6 +21,7 @@ private:
   bool activeChastikeySession = false;
   bool randomShockMode = false;
   bool teasingMode = true;
+  int credits = 0;
   unsigned long randomShocksPerHour = 1;
   String chastikeyHolder;
   unsigned long endTime;
@@ -34,6 +35,7 @@ private:
   unsigned long timeOfLastClosing = 0;
   unsigned long timeOfLastShock = 0;
   unsigned long timeOfNextScheduledShock = 0;
+  unsigned long timeOfRandomModeStart = 0;
   unsigned long timeOfLast5sInterval = 0;
   unsigned long timeOfLast5minInterval = 0;
 //  String lastShockOwner;
@@ -72,6 +74,9 @@ public:
   unsigned long GetTimeOfLastShock() { return timeOfLastShock; }
   void SetTimeOfLastShock(unsigned long t) { timeOfLastShock = t; }
 
+  unsigned long GetTimeOfRandomModeStart() { return timeOfRandomModeStart; }
+  void SetTimeOfRandomModeStart(unsigned long t) { timeOfRandomModeStart = t; }
+
   void SetTimeOfLast5sInterval(unsigned long setTime) { timeOfLast5sInterval = setTime; }
   unsigned long GetTimeOfLast5sInterval() { return timeOfLast5sInterval; }
   void SetTimeOfLast5minInterval(unsigned long setTime) { timeOfLast5minInterval = setTime; }
@@ -87,8 +92,16 @@ public:
 
   void SetTeasingMode(bool mode) { teasingMode = mode; }
   bool IsTeasingMode() { return teasingMode; }
-  void SetRandomMode(bool onOff, int shocksPerHour=1);
+  void SetTeasingModeInt(int mode) { teasingMode = (mode > 0); }
+  int GetTeasingModeInt() { return teasingMode ? 1 : 0; }
+  int SetRandomMode(bool onOff, int shocksPerHour=1);
   bool IsRandomMode() { return randomShockMode; }
+  int GetRandomModeShocksPerHour() { return randomShocksPerHour; }
+  void SetRandomModeInt(int mode) { randomShockMode = (mode > 0); randomShocksPerHour = mode; }
+  int GetRandomModeInt() { return randomShockMode ? randomShocksPerHour : 0; }
+
+  void SetCredits(int newVal) { credits = newVal; }
+  int GetCredits() { return credits; }
 
   void SetEmergencyReleaseCounter(int newVal) { emergencyReleaseCounter = newVal; emergencyReleaseCounterRequest = false; }
   int GetEmergencyReleaseCounter() { return emergencyReleaseCounter; }

@@ -4,7 +4,7 @@
 //
 // LIBRARIES
 // ArduinoJson
-// UniversalTelegramBot by Brian Lough
+// UniversalTelegramBot by Brian Lough (with modifications from cb-lock)
 // U8g2
 //
 // BOARD

@@ -244,21 +244,40 @@ void Session::Punishment(int level)
 
 
 // ------------------------------------------------------------------------
-void Session::SetRandomMode(bool onOff, int shocksPerHour)
+int Session::SetRandomMode(bool onOff, int shocksPerHour)
 {
   Serial.println("*** Session::SetRandomMode()");
   Serial.print("- onOff: ");
   Serial.println(onOff);
   Serial.print("- shocksPerHour: ");
   Serial.println(shocksPerHour);
+  unsigned long now = timeFunc.GetTimeInSeconds();
+  unsigned long duration = now - GetTimeOfRandomModeStart();
+  int creditIncrement = now / 3600;
+  bool oldRandomShockMode = randomShockMode;
   randomShockMode = onOff;
-  // randomShocksPerHour must be greater zero!
-  if (shocksPerHour > 0)
-    randomShocksPerHour = shocksPerHour;
-  else
-    randomShocksPerHour = 1;
+
   if (randomShockMode)
+  {
+    // randomShocksPerHour must be greater zero!
+    if (shocksPerHour > 0)
+      randomShocksPerHour = shocksPerHour;
+    else
+      randomShocksPerHour = 1;
+    SetTimeOfRandomModeStart(now);
     ScheduleNextRandomShock();
+  }
+  else if (oldRandomShockMode)
+  {
+    // if randomShockMode is switched off, but oldRandomShockMode was on...
+    Serial.print("- credit increment: ");
+    Serial.println(creditIncrement);
+    SetCredits(GetCredits() + creditIncrement);
+  }
+
+  message.WriteCommandsAndSettings();
+
+  return creditIncrement;
 }
 
 

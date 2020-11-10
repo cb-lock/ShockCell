@@ -54,8 +54,8 @@ public:
   long ReadParamLong(String text, String id);
   void AdoptUserInfos(String text);
   void AdoptChatDescription(String descr);
-  void UpdateChatDescription();
   void UnknownCommand(String chatId=GROUP_CHAT_ID);
+  void WriteCommandsAndSettings();
 };
 
 #endif
