@@ -42,7 +42,11 @@ The ShockCell key safe knows four different roles in the group chat.
 
 Every member in the group chat can have only one role. However, the following role transitions are possible.
 
-
+|   |   |   |   |   |
+|---|---|---|---|---|
+|   |   |   |   |   |
+|   |   |   |   |   |
+|   |   |   |   |   |
 
 #### Rules for role changes
 
