@@ -38,9 +38,11 @@ The ShockCell key safe knows four different roles in the group chat.
 1. Wearer - the one person being controlled and wearing a chastity device with a lock and shock device.
 2. Holder - the one person controlling (holding) the key safe storing the keys to that lock. She/he also controls the shocks for the wearer.
 3. Guest - additional people in the group chat without special rights
-4. Teaser - additional people who support the holder with the rights to send shocks to the wearer.
+4. Teaser - additional people who support the holder with the rights to send shocks to the wearer (this right can be controlled by the holder).
 
-Every member in the group chat can have only one role. However, roles can be changed.
+Every member in the group chat can have only one role. However, the following role transitions are possible.
+
+
 
 #### Rules for role changes
 
