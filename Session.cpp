@@ -53,7 +53,7 @@ void Session::Shock(int count, long milliseconds)
   Serial.print("last shock ago: ");
   Serial.println(now - timeOfLastShock);
   if ((now - timeOfLastShock) > 250)
-    firstBurst = 2000;
+    firstBurst = 2500;
 
   for (int i = 0; i < count; i++)
   {
@@ -207,7 +207,7 @@ void Session::Punishment(int level)
 {
   message.SendMessage("Wearer " + users.GetWearer()->GetName() + "needs to be punished.", chatId);
   unsigned long rnd = random(10000);
-  switch (rnd % level)
+  switch (rnd * level / 10000)
   {
     case 0:
       Shock(1, 1000);
@@ -244,6 +244,40 @@ void Session::Punishment(int level)
 
 
 // ------------------------------------------------------------------------
+int Session::SetVerificationMode(bool onOff, int count)
+{
+  Serial.println("*** Session::SetVerificationMode()");
+  Serial.print("- onOff: ");
+  Serial.println(onOff);
+  Serial.print("- count: ");
+  Serial.println(count);
+
+  verificationMode = onOff;
+  verificationsPerDay = count;
+  message.WriteCommandsAndSettings();
+}
+
+
+// ------------------------------------------------------------------------
+void Session::ProcessVerification()
+{
+  Serial.println("*** Session::ProcessVerification()");
+  Serial.print("- verificationMode: ");
+  Serial.println(verificationMode);
+  if (verificationMode)
+  {
+    // honor need for sleep
+    Serial.print("- IsSleeping: ");
+    Serial.println(users.GetWearer()->IsSleeping());
+
+    if (! users.GetWearer()->IsSleeping())
+    {
+    }
+  }
+}
+
+
+// ------------------------------------------------------------------------
 int Session::SetRandomMode(bool onOff, int shocksPerHour)
 {
   Serial.println("*** Session::SetRandomMode()");
@@ -253,7 +287,8 @@ int Session::SetRandomMode(bool onOff, int shocksPerHour)
   Serial.println(shocksPerHour);
   unsigned long now = timeFunc.GetTimeInSeconds();
   unsigned long duration = now - GetTimeOfRandomModeStart();
-  int creditIncrement = now / 3600;
+  // credit is given for each hours minus 5 seconds in order to prevent small deviations from the 1 hour duration
+  int creditIncrement = duration / 3595;
   bool oldRandomShockMode = randomShockMode;
   randomShockMode = onOff;
 
@@ -264,6 +299,8 @@ int Session::SetRandomMode(bool onOff, int shocksPerHour)
       randomShocksPerHour = shocksPerHour;
     else
       randomShocksPerHour = 1;
+    ramdomShockOffMessage10 = false;
+    ramdomShockOffMessage30 = false;
     SetTimeOfRandomModeStart(now);
     ScheduleNextRandomShock();
   }
@@ -295,7 +332,10 @@ void Session::ScheduleNextRandomShock()
   }
   else
   {
+    // 
     timeOfNextScheduledShock = timeFunc.GetTimeInSeconds() + random(86400*100) / (1200 * randomShocksPerHour);
+    if (timeOfNextScheduledShock > 60)
+      timeOfNextScheduledShock = timeOfNextScheduledShock - 15;
     Serial.print("- timeOfNextScheduledShock: ");
     Serial.println(timeOfNextScheduledShock);
   }
@@ -310,12 +350,38 @@ void Session::ProcessRandomShocks()
   Serial.println(randomShockMode);
   if (randomShockMode)
   {
+    // process auto-off for random shocks
+    unsigned long duration = timeFunc.GetTimeInSeconds() - GetTimeOfRandomModeStart();
+    // auto-off random mode after 3 hours/RANDOM_SHOCK_AUTO_OFF_SECONDS
+    if (duration > RANDOM_SHOCK_AUTO_OFF_SECONDS)
+    {
+      message.SendMessage("Random mode will be turned off now, because it ran for " + String(RANDOM_SHOCK_AUTO_OFF_SECONDS/3600, DEC) + " hours.");
+      message.RandomShockModeAction("off", USER_ID_BOT, GROUP_CHAT_ID, FORCE);
+      return;
+    }
+    // message 10 minutes before auto-off
+    else if ((duration > (RANDOM_SHOCK_AUTO_OFF_SECONDS - 600)) &&
+             ( ! ramdomShockOffMessage10))
+    {
+      message.SendMessage("Random mode will be turned off automatically in 10 minutes. By triggering the random mode again, it will run again for " + String(RANDOM_SHOCK_AUTO_OFF_SECONDS/3600, DEC) + " hours before auto-off.");
+      ramdomShockOffMessage10 = true;
+    }
+    // message 30 minutes before auto-off
+    else if ((duration > (RANDOM_SHOCK_AUTO_OFF_SECONDS - 1800)) &&
+             ( ! ramdomShockOffMessage30))
+    {
+      message.SendMessage("Random mode will be turned off automatically in 30 minutes. By triggering the random mode again, it will run again for " + String(RANDOM_SHOCK_AUTO_OFF_SECONDS/3600, DEC) + " hours before auto-off.");
+      ramdomShockOffMessage30 = true;
+    }
+
+    // honor need for sleep
     Serial.print("- IsSleeping: ");
     Serial.println(users.GetWearer()->IsSleeping());
     if (users.GetWearer()->IsSleeping())
     {
       // turn off random shock mode during sleeping time
-      randomShockMode = false;
+      message.SendMessage("Wearer is allowed to sleep now.");
+      message.RandomShockModeAction("off", USER_ID_BOT, GROUP_CHAT_ID, FORCE);
       return;
     }
 
@@ -326,7 +392,8 @@ void Session::ProcessRandomShocks()
     if (timeOfNextScheduledShock < timeFunc.GetTimeInSeconds())
     {
       // execute random shock
-      message.ShockAction(users.GetBot()->GetId(), GROUP_CHAT_ID, 1, 1000);
+      unsigned long rnd = (random(9999) / 1000) + 1;
+      message.ShockAction(rnd * 1000, 1, users.GetBot()->GetId());
       // and schedule the next one
       ScheduleNextRandomShock();
     }

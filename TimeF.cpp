@@ -1,5 +1,23 @@
+#include <time.h>
 #include "Defs.h"
 #include "TimeF.h"
+
+
+
+// ------------------------------------------------------------------------
+bool TimeFunctions::IsWeekend()
+{
+  Serial.println("*** IsWeekend()");
+  Serial.print("- day of week: ");
+  // 0 Monday, 6 Sunday
+  int dayOfWeek = ((GetTimeInSeconds() / 86400L) + 5) % 7;
+  Serial.println(dayOfWeek);
+
+  if (dayOfWeek < 5)
+    return false;
+  else
+    return true;
+}
 
 
 // ------------------------------------------------------------------------
@@ -19,12 +37,14 @@ String TimeFunctions::Time2String(const long seconds)
   return String(value);
 }
 
+
 // ------------------------------------------------------------------------
 long TimeFunctions::GetTimeInSeconds()
 {
   time_t nowSecs = time(nullptr);
   return nowSecs;
 }
+
 
 // ------------------------------------------------------------------------
 int TimeFunctions::GetHours()
@@ -36,6 +56,7 @@ int TimeFunctions::GetHours()
   return hours;
 }
 
+
 // ------------------------------------------------------------------------
 int TimeFunctions::GetMinutes()
 {
@@ -45,19 +66,25 @@ int TimeFunctions::GetMinutes()
   return timeinfo.tm_min;
 }
 
+
 // ------------------------------------------------------------------------
 bool TimeFunctions::IsSleepingTime()
 {
+  Serial.println("*** IsSleepingTime()");
   time_t nowSecs = GetTimeInSeconds();
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
   int hours = (timeinfo.tm_hour + UTC_OFFSET) % 24;
+  unsigned long sleepingExtension = IsWeekend() ? 3*3600L : 0;
+  Serial.print("- sleepingExtension: ");
+  Serial.println(sleepingExtension);
 
-  if ((hours < SLEEP_TIME_END) || (hours >= SLEEP_TIME_BEGIN))
+  if ((hours < SLEEP_TIME_END + sleepingExtension) || (hours >= SLEEP_TIME_BEGIN))
     return true;
   else
     return false;
 }
+
 
 // ------------------------------------------------------------------------
 bool TimeFunctions::SleepingTimeJustChanged(bool started)
@@ -86,6 +113,7 @@ bool TimeFunctions::SleepingTimeJustChanged(bool started)
   }
 }
 
+
 // ------------------------------------------------------------------------
 String TimeFunctions::GetTimeString(unsigned long t)
 {
@@ -103,6 +131,7 @@ String TimeFunctions::GetTimeString(unsigned long t)
   sprintf(buf, "%02d:%02d.%02d", hours, timeinfo.tm_min, timeinfo.tm_sec);
   return String(buf);
 }
+
 
 // ------------------------------------------------------------------------
 void TimeFunctions::SetClock()
@@ -128,3 +157,6 @@ void TimeFunctions::SetClock()
   Serial.print(F("Current time: "));
   Serial.print(asctime(&timeinfo));
 }
+
+
+//

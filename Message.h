@@ -18,6 +18,8 @@ class Message
 private:
   String lastChatDescription;
   bool mutedWearer;
+  bool requestRestart = false;
+  String requestChatId = "";
 
 public:
   Message();
@@ -37,7 +39,8 @@ public:
   void MessageRoles(String chatId=GROUP_CHAT_ID);
   void MessageChastikeyState(String chatId=GROUP_CHAT_ID);
   void MessageState(String chatId=GROUP_CHAT_ID);
-  void ShockAction(String fromId, String chatId, int count, long milliseconds);
+  void ShockAction(String durationStr, int count, String fromId, String chatId=GROUP_CHAT_ID);
+  void ShockAction(unsigned long milliseconds, int count, String fromId, String chatId=GROUP_CHAT_ID);
   void HolderAction(String fromId, String chatId=GROUP_CHAT_ID);
   void TeaserAction(String fromId, String chatId=GROUP_CHAT_ID);
   void TeasingModeAction(bool mode, String fromId, String chatId=GROUP_CHAT_ID);
@@ -48,8 +51,14 @@ public:
   void UnlockAction(String fromId, String chatId=GROUP_CHAT_ID, bool force=false);
   void ReleaseAction(String fromId, String chatId=GROUP_CHAT_ID);
   void RestrictUserAction(String fromId, String chatId=GROUP_CHAT_ID);
-  void RandomShockModeAction(String commandParameter, String fromId, String chatId);
+  void RandomShockModeAction(String commandParameter, String fromId, String chatId=GROUP_CHAT_ID, bool force=false);
+  void VerificationModeAction(String commandParameter, String fromId, String chatId=GROUP_CHAT_ID, bool force=false);
+  void CheckVerificationAction(String caption, String fromId, String chatId=GROUP_CHAT_ID);
   void EmergencyAction(String fromId, String chatId=GROUP_CHAT_ID);
+  void RestartRequest(String fromId, String chatId=GROUP_CHAT_ID);
+  void RestartAction(String fromId, String chatId=GROUP_CHAT_ID);
+  void ResetRequests();
+  void ProcessPendingRequests();
   void SetChatDescription(String chatId, String descr);
   long ReadParamLong(String text, String id);
   void AdoptUserInfos(String text);

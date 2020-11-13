@@ -20,9 +20,14 @@ private:
 //  User supervisor;
   bool activeChastikeySession = false;
   bool randomShockMode = false;
+  bool ramdomShockOffMessage30 = false;
+  bool ramdomShockOffMessage10 = false;
+  unsigned long randomShocksPerHour = 1;
+  bool verificationMode = true;
+  int verificationsPerDay = 0;
+  int verificationsToday = 0;
   bool teasingMode = true;
   int credits = 0;
-  unsigned long randomShocksPerHour = 1;
   String chastikeyHolder;
   unsigned long endTime;
   String endTimeStr;
@@ -99,6 +104,15 @@ public:
   int GetRandomModeShocksPerHour() { return randomShocksPerHour; }
   void SetRandomModeInt(int mode) { randomShockMode = (mode > 0); randomShocksPerHour = mode; }
   int GetRandomModeInt() { return randomShockMode ? randomShocksPerHour : 0; }
+
+  int SetVerificationMode(bool onOff, int count=1);
+  bool IsVerificationMode() { return verificationMode; }
+  int GetVerificationCountPerDay() { return verificationsPerDay; }
+  void SetVerificationModeInt(int mode) { verificationMode = (mode > 0); verificationsPerDay = mode; }
+  int GetVerificationModeInt() { return verificationMode ? verificationsPerDay : 0; }
+  int SetVerificationsToday(int count) { verificationsToday = count; }
+  bool GetVerificationsToday() { return verificationsToday; }
+  void ProcessVerification();
 
   void SetCredits(int newVal) { credits = newVal; }
   int GetCredits() { return credits; }
