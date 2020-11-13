@@ -79,9 +79,10 @@ The key safe consists of mechanic hardware, electronic and software. The mechani
 ### Part Listing
 
 - ESP32 board. Probably any ESP32 board will do. I use the DOIT ESP32 DEVKIT V1. It is available from different suppliers. I got mine from Aliexpress, https://de.aliexpress.com/item/32992390199.html
-- Dog shock collar - Any truly waterproof device will do with a good range and a remote control with buttons. I use https://de.aliexpress.com/item/32915272728.html
+- 0,96 zoll IIC display - I2C interface seems easier to me, but the U8g2 library supports a wide range of display types. Mine is this: https://de.aliexpress.com/item/32899149458.html
 - Transistor BC547 - needed to activate the button of the remote control for the shock device (shock collar)
 - 10 kOhm resistor for the transistor base
+- Dog shock collar - Any truly waterproof device will do with a good range and a remote control with buttons. I use https://de.aliexpress.com/item/32915272728.html
 - A switch sensor - needed to detect if the key safe is open or closed
 - USB cable for the power supply (micro USB)
 
