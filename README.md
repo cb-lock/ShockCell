@@ -94,3 +94,8 @@ I use the Arduino ISE to build and uploaded the project to the device. The softw
 - ArduinoJson - from Arduino library
 - UniversalTelegramBot by Brian Lough  - with my modifications, see https://github.com/cb-lock/Universal-Arduino-Telegram-Bot
 
+# Reference
+- ESP32 tutorial - https://randomnerdtutorials.com/getting-started-with-esp32/
+- Connecting ESP32 to display - http://www.iotsharing.com/2017/05/how-to-use-arduino-esp32-to-display-oled.html?m=1
+- U8g2 library - https://github.com/olikraus/u8g2/wiki/setup_tutorial
+
