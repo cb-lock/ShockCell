@@ -72,3 +72,16 @@ The /start command lists all commands available for the role
 #define BOT_COMMANDS_CAPTURE "/capture - Capture wearer as a sub\n/release - Release wearer as a sub"
 #define BOT_COMMANDS_EMERGENCY "/thisisanemergency - Release the wearer in case of an emergency\n"
 
+## Hardware
+
+The key safe consists of mechanic hardware, electronic and software. The mechanics are probably something individual, but I would like to share the electronics part listing and schematics.
+
+### Part Listing
+
+- ESP32 board. Probably any ESP32 board will do. I use the DOIT ESP32 DEVKIT V1. It is available from different suppliers. I got mine from Aliexpress, https://de.aliexpress.com/item/32992390199.html
+- Dog shock collar - Any truly waterproof device will do with a good range and a remote control with buttons. I use https://de.aliexpress.com/item/32915272728.html
+- Transistor BC547 - needed to activate the button of the remote control for the shock device (shock collar)
+- 10 kOhm resistor for the transistor base
+- A switch sensor - needed to detect if the key safe is open or closed
+- USB cable for the power supply (micro USB)
+
