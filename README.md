@@ -42,12 +42,12 @@ The ShockCell key safe knows four different roles in the group chat.
 
 Every member in the group chat can have only one role. However, the following role transitions are possible.
 
-| New role: | -> Holder                            | -> Teaser                                  | -> Guest                                   | -> Wearer |
-|-----------|--------------------------------------|--------------------------------------------|--------------------------------------------|-----------|
-| Holder    | -                                    | yes, setting the wearer free automatically | yes, setting the wearer free automatically | no        |
-| Teaser    | yes, if there is currently no holder | -                                          | yes                                        |           |
-| Guest     | yes, if there is currently no holder | yes                                        | -                                          |           |
-| Wearer    | no                                   | no                                         | no                                         | -         |
+| New role: | -> Holder                            | -> Teaser                                  | -> Guest                                   | -> Wearer               |
+|-----------|--------------------------------------|--------------------------------------------|--------------------------------------------|-------------------------|
+| Holder    | -                                    | yes, setting the wearer free automatically | yes, setting the wearer free automatically | no                      |
+| Teaser    | yes, if there is currently no holder | -                                          | yes                                        | no                      |
+| Guest     | yes, if there is currently no holder | yes                                        | -                                          | no                      |
+| Wearer    | no                                   | no                                         | no                                         | -                       |
 
 #### Rules for role changes
 
