@@ -13,14 +13,12 @@ private:
   String emlaserver;
   String emlaurl;
   String sessionCookie;
-  String piwikString;
   
 public:
   EmlaServer(OledDisplay & o) : oledDisplay(o)
   {
     emlaserver = "www.emlalock.com";
     emlaurl = "https://" + emlaserver;
-    piwikString = "_pk_ses.1.2829=*; _pk_id.1.2829=ae048d3ac5b6d634.1556455237.3.1556704069.1556704061.";
   }
   String GetServer() { return emlaserver; }
   bool Connect2WiFi(const char *ssid, const char *password, int timeout);

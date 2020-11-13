@@ -1,4 +1,6 @@
 #include "esp32-hal-ledc.h"
+// for the watchdog timers
+#include "esp_system.h"
 #include "Oled.h"
 #include "Defs.h"
 #include "TimeF.h"
@@ -25,9 +27,22 @@ UserSet users;
 
 unsigned long lastTimeBotRan;
 
+hw_timer_t *watchdogTimer = NULL;
+
+
+
+
 void PrintDisplay(String statusMsg = "");
 
 
+
+
+// ------------------------------------------------------------------------
+void IRAM_ATTR resetModule()
+{
+  Serial.println("********************* REBOOT ***********************");
+  ESP.restart();
+}
 
 
 // -------------------------------------------------
@@ -35,6 +50,20 @@ void setup()
 {
   Serial.begin(115200);
   delay(200);
+
+  //timer 0, div 40000 = 0,5 ms, 2000 ticks for 1 second
+  //timer 0, div 8000 = 0,1 ms, 10000 ticks for 1 second
+  // hw_timer_t * timerBegin(uint8_t num, uint16_t divider, bool countUp)
+  watchdogTimer = timerBegin(0, 8000, true);
+  // void timerAttachInterrupt(hw_timer_t *timer, void (*fn)(void), bool edge)
+  timerAttachInterrupt(watchdogTimer, &resetModule, true);
+  // 60 seconds timeout for WD timer
+  // 2000*60 = 120000
+  // 10000*60 = 600000
+  // void timerAlarmWrite(hw_timer_t *timer, uint64_t alarm_value, bool autoreload)
+  timerAlarmWrite(watchdogTimer, 1200000, false); //set time in us
+  // void timerAlarmEnable(hw_timer_t *timer)
+  timerAlarmEnable(watchdogTimer); //enable interrupt
 
   // Pins
   pinMode(SHOCK_PIN, OUTPUT);
@@ -118,6 +147,8 @@ void setup()
 // -------------------------------------------------
 void loop()
 {
+  timerWrite(watchdogTimer, 0);
+
   //------------
   unsigned long milliseconds = millis();
   String msg;
@@ -127,7 +158,7 @@ void loop()
   {
     oledDisplay.PrintDisplay();
     message.MessageCoverStateChange();
-    message.UpdateChatDescription();
+    message.WriteCommandsAndSettings();
     oldCoverState = coverState;
   }
 
@@ -149,20 +180,31 @@ void loop()
   if (timeFunc.GetTimeInSeconds() >= (session.GetTimeOfLast5minInterval() + 5*60))
   {
 //    mistress.CheckOffline();
+    session.ProcessVerification();
 
     // has the sleeping period just begun?
-    if (timeFunc.SleepingTimeJustChanged(true))
+    if (users.GetHolder())
     {
-      users.GetWearer()->SetSleeping(true);
-      msg = "Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.";
-      message.SendMessage(msg);
-    }
-    // has the sleeping period just ended?
-    if (timeFunc.SleepingTimeJustChanged(false))
-    {
-      users.GetWearer()->SetSleeping(false);
-      msg = "Good morning "  + users.GetWearer()->GetName() + ", wake up boy!";
-      message.SendMessage(msg);
+      bool wasSleeping = users.GetWearer()->IsSleeping();
+      if (timeFunc.SleepingTimeJustChanged(true))
+      {
+        users.GetWearer()->SetSleeping(true);
+//        if (! wasSleeping)
+        {
+          msg = "Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.";
+          message.SendMessage(msg);
+        }
+      }
+      // has the sleeping period just ended?
+      if (timeFunc.SleepingTimeJustChanged(false))
+      {
+        users.GetWearer()->SetSleeping(false);
+        if (wasSleeping)
+        {
+          msg = "Good morning "  + users.GetWearer()->GetName() + ", wake up boy!";
+          message.SendMessage(msg);
+        }
+      }
     }
 
     if (session.GetEmergencyReleaseCounterRequest())

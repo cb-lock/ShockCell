@@ -76,7 +76,7 @@ String EmlaServer::GetCookieHeader()
   Serial.print("- use cookie: ");
   Serial.println(sessionCookie);
 
-  return "ELKEY=" + sessionCookie + ";" + piwikString;
+  return "ELKEY=" + sessionCookie + ";";
 }
 
 // ------------------------------------------------------------------------

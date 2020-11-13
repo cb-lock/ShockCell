@@ -12,6 +12,7 @@ public:
   long GetTimeInSeconds();
   int GetHours();
   int GetMinutes();
+  bool IsWeekend();
   bool IsSleepingTime();
   bool SleepingTimeJustChanged(bool started);
   String GetTimeString(unsigned long t = 0);

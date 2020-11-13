@@ -7,6 +7,8 @@
 #define USER_CACHE_SIZE 30
 
 #define RANDOM_PUNISHMENT_PROBABILITY 5
+#define RANDOM_SHOCK_AUTO_OFF_SECONDS (3*3600)
+#define RANDOM_SHOCKS_PER_HOUR_MAX 120
 
 #define DEFAULT_SESSION_LENGTH 86400
 
@@ -29,6 +31,8 @@
 
 #define UNLOCK_DURATION 4000
 
+#define VERIFICATIONS_MAX 5
+
 #define REQUIREMENTS_ENABLED false
 #define REQUIREMENTS_REQUEST_MAX 20
 #define REQUIREMENTS_LOCK_PER_SESSION 1000
@@ -50,6 +54,17 @@
 #define OPTIONAL false
 #define ONLY_NAME true
 #define FULL false
+
+// ---------------------------------
+// Persisted values
+#define LAST_OPENING_TAG "LAOP"
+#define LAST_CLOSING_TAG "LACL"
+#define LAST_SHOCK_TAG "LASH"
+#define RANDOM_MODE_START_TAG "RAMS"
+#define TEASING_MODE_TAG "TEMO"
+#define RANDOM_MODE_TAG "RAMO"
+#define VERIFICATION_MODE_TAG "VEMO"
+#define CREDITS_TAG "CRED"
 
 // ---------------------------------
 
@@ -88,6 +103,10 @@
 #define BOT_TOKEN "YOUR_BOT_TOKEN"
 #define USER_ID_WEARER "TELEGRAM_USER_ID_WEARER"
 #define USER_NAME_WEARER "TELEGRAM_USER_NAME_WEARER"
+
+// ---------------------------------
+// IFTTT
+#define IFTTT_API_KEY "IFTTT_API_KEY"
 
 // ---------------------------------
 // CHASTIKEY
