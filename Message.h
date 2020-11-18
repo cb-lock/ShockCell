@@ -60,9 +60,9 @@ public:
   void ResetRequests();
   void ProcessPendingRequests();
   void SetChatDescription(String chatId, String descr);
-  long ReadParamLong(String text, String id);
+  unsigned long ReadParamLong(String text, String id);
   void AdoptUserInfos(String text);
-  void AdoptChatDescription(String descr);
+  void AdoptChatDescription();
   void UnknownCommand(String chatId=GROUP_CHAT_ID);
   void WriteCommandsAndSettings();
 };

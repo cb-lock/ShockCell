@@ -115,7 +115,9 @@ public:
   bool GetVerificationsToday() { return actualVerificationsToday; }
   void ProcessVerification();
   unsigned long GetTimeOfNextVerificationBegin() { return timeOfNextVerificationBegin; }
+  void SetTimeOfNextVerificationBegin(unsigned long theTime) { timeOfNextVerificationBegin = theTime; }
   unsigned long GetTimeOfNextVerificationEnd() { return timeOfNextVerificationEnd; }
+  void SetTimeOfNextVerificationEnd(unsigned long theTime) { timeOfNextVerificationEnd = theTime; }
 
   void SetCredits(int newVal) { credits = newVal; }
   int GetCredits() { return credits; }

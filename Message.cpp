@@ -97,16 +97,7 @@ void Message::Init()
   index = users.AddUser(USER_ID_BOT, "Ruler", ROLE_SHOCKCELL);
   users.GetUser(index)->SetBot(true);
 
-  String description;
-  if (bot.getChatDescription(GROUP_CHAT_ID, description))
-  {
-    AdoptChatDescription(description);
-  }
-  else
-  {
-    // this is only needed for the initial setup of a chat group
-    WriteCommandsAndSettings();
-  }
+  AdoptChatDescription();
 }
 
 
@@ -549,12 +540,12 @@ void Message::TeasingModeAction(bool mode, String fromId, String chatId)
       SendMessage(COMMON_MSG_TEASING_ON, chatId);
     else
       SendMessage(COMMON_MSG_TEASING_OFF, chatId);
+    WriteCommandsAndSettings();
   }
   else
   {
     SendMessage("Request denied. Only the holder has the permission to control the rights for users with the teaser role.", chatId);
   }
-  WriteCommandsAndSettings();
 }
 
 
@@ -640,6 +631,7 @@ void Message::VerificationModeAction(String commandParameter, String fromId, Str
         session.SetVerificationMode(true, verificationsPerDay);
         SendMessage(msg, chatId);
       }
+      WriteCommandsAndSettings();
     }
     else
     {
@@ -676,6 +668,7 @@ void Message::RandomShockModeAction(String commandParameter, String fromId, Stri
       {
         int creditsEarned = session.SetRandomMode(false);
         SendMessage("Switching random mode off. Wearer " + users.GetWearer()->GetName() + " has earned " + creditsEarned + " credits. His new credit balance is " + session.GetCredits() + ".", chatId);
+        WriteCommandsAndSettings();
       }
       else
       {
@@ -691,6 +684,7 @@ void Message::RandomShockModeAction(String commandParameter, String fromId, Stri
                  " hours have passed or sleeping time of the wearer " + users.GetWearer()->GetName() + " begins.";
           session.SetRandomMode(true, shocksPerHour);
           SendMessage(msg, chatId);
+          WriteCommandsAndSettings();
         }
         else
         {
@@ -719,6 +713,7 @@ void Message::CheckVerificationAction(String caption, String fromId, String chat
        (caption.indexOf("proof") != -1)))
   {
     session.CheckVerification();
+    WriteCommandsAndSettings();
   }
 }
 
@@ -908,7 +903,7 @@ void Message::ProcessNewMessages()
       else if (text == "/test")
         SendMessage(SYMBOL_LOCK_CLOSED SYMBOL_LOCK_OPEN SYMBOL_LOCK_KEY SYMBOL_KEY SYMBOL_MOON SYMBOL_SUN SYMBOL_WATCHING_EYES SYMBOL_POLICEMAN SYMBOL_QUEEN SYMBOL_DEVIL_SMILE
                     SYMBOL_DEVIL_ANGRY SYMBOL_BELL SYMBOL_TWO_CHAIN_LINKS SYMBOL_CLOCK_3 SYMBOL_SMILY_SMILE SYMBOL_SMILY_WINK SYMBOL_SMILE_OHOH SYMBOL_FORBIDDEN SYMBOL_CUSTOMS
-                    SYMBOL_STOP SYMBOL_OK SYMBOL_EYE SYMBOL_SUN SYMBOL_NO_ENTRY SYMBOL_CHAINS, from_id);
+                    SYMBOL_STOP SYMBOL_OK SYMBOL_EYE SYMBOL_SUN SYMBOL_NO_ENTRY SYMBOL_CHAINS, chat_id);
       else if (text.substring(0, 1) == "/")
         UnknownCommand(chat_id);
       else if (hasPhoto)
@@ -962,7 +957,7 @@ void Message::SetChatDescription(String chatId, String descr)
 
 
 // -------------------------------------------------
-long Message::ReadParamLong(String text, String id)
+unsigned long Message::ReadParamLong(String text, String id)
 {
   /*
     Serial.println("ReadParamLong()");
@@ -992,8 +987,7 @@ long Message::ReadParamLong(String text, String id)
 // -------------------------------------------------
 void Message::AdoptUserInfos(String text)
 {
-  // USERS: Charly:1157999292:Wearer; ShockCell:1264046045:ShockCell; S:919525040:Guest;
-  Serial.println("AdoptUserInfos()");
+  Serial.println("*** AdoptUserInfos()");
   Serial.print(text);
   Serial.println();
   int userPos = text.indexOf(USERS_PREFIX) + String(USERS_PREFIX).length();
@@ -1035,49 +1029,90 @@ void Message::AdoptUserInfos(String text)
 
 
 // -------------------------------------------------
-void Message::AdoptChatDescription(String descr)
+void Message::AdoptChatDescription()
 {
+  String descr;
   Serial.println("*** AdoptChatDescription()");
-  Serial.print("- descr: ");
-  Serial.println(descr);
-  // LastOpening:1598445166; LastClosing:1598445167; LastShock:1598445168; USERS: Charly:1157999292:Wearer; ShockCell:1264046045:ShockCell; S:919525040:Guest;
-  session.SetTimeOfLastOpening(ReadParamLong(descr, LAST_OPENING_TAG));
-  session.SetTimeOfLastClosing(ReadParamLong(descr, LAST_CLOSING_TAG));
-  session.SetTimeOfLastShock(ReadParamLong(descr, LAST_SHOCK_TAG));
-  session.SetTimeOfRandomModeStart(ReadParamLong(descr, RANDOM_MODE_START_TAG));
-  session.SetTeasingModeInt(ReadParamLong(descr, TEASING_MODE_TAG));
-  session.SetRandomModeInt(ReadParamLong(descr, RANDOM_MODE_TAG));
-  Serial.print("- Random Mode: ");
-  Serial.println(session.IsRandomMode());
-  Serial.print("- Random Mode cycle: ");
-  Serial.println(session.GetRandomModeShocksPerHour());
-//  session.SetRandomMode(false, 5);
-  session.SetVerificationModeInt(ReadParamLong(descr, VERIFICATION_MODE_TAG));
-  session.SetCredits(ReadParamLong(descr, CREDITS_TAG));
-  //  info += users.GetUsersInfo();
-  AdoptUserInfos(descr);
+
+  if (bot.getChatDescription(GROUP_CHAT_ID, descr))
+  {
+    String response = bot.getMyCommands();
+    DynamicJsonDocument doc(TELEGRAM_MAX_MESSAGE_LENGTH);
+    DeserializationError error = deserializeJson(doc, (char *) response.c_str());
+
+    if (!error)
+    {
+      if (doc.containsKey("result"))
+      {
+        int resultArrayLength = doc["result"].size();
+        if (resultArrayLength > 0)
+        {
+          descr = "";
+          int newMessageIndex = 0;
+          // Step through all results
+          for (int i = 0; i < resultArrayLength; i++)
+          {
+            JsonObject result = doc["result"][i];
+            String command = result["command"];
+            Serial.print("- command: ");
+            Serial.println(command);
+            String description = result["description"];
+            Serial.print("- description: ");
+            Serial.println(description);
+            if (command.charAt(0) == '_')
+              descr += description;
+          }
+        }
+        else
+          Serial.println("- no new messages");
+      }
+      else
+        Serial.println("- Response contained no 'result'");
+    }
+
+    Serial.print("- descr: ");
+    Serial.println(descr);
+    // LastOpening:1598445166; LastClosing:1598445167; LastShock:1598445168; USERS: Charly:1157999292:Wearer; ShockCell:1264046045:ShockCell; S:919525040:Guest;
+    session.SetTimeOfLastOpening(ReadParamLong(descr, LAST_OPENING_TAG));
+    session.SetTimeOfLastClosing(ReadParamLong(descr, LAST_CLOSING_TAG));
+    session.SetTimeOfLastShock(ReadParamLong(descr, LAST_SHOCK_TAG));
+    session.SetTimeOfRandomModeStart(ReadParamLong(descr, RANDOM_MODE_START_TAG));
+    session.SetTimeOfNextVerificationBegin(ReadParamLong(descr, NEXT_VERIFICATION_BEGIN_TAG));
+    session.SetTimeOfNextVerificationEnd(ReadParamLong(descr, NEXT_VERIFICATION_END_TAG));
+
+    session.SetTeasingModeInt(ReadParamLong(descr, TEASING_MODE_TAG));
+    session.SetRandomModeInt(ReadParamLong(descr, RANDOM_MODE_TAG));
+    Serial.print("- Random Mode: ");
+    Serial.println(session.IsRandomMode());
+    Serial.print("- Random Mode cycle: ");
+    Serial.println(session.GetRandomModeShocksPerHour());
+  //  session.SetRandomMode(false, 5);
+    session.SetVerificationModeInt(ReadParamLong(descr, VERIFICATION_MODE_TAG));
+    session.SetVerificationsToday(ReadParamLong(descr, ACTUAL_VERIFICATIONS_TAG));
+    session.SetCredits(ReadParamLong(descr, CREDITS_TAG));
+    //  info += users.GetUsersInfo();
+    AdoptUserInfos(descr);
+  }
+  else
+  {
+    // this is only needed for the initial setup of a chat group
+    WriteCommandsAndSettings();
+  }
 }
 
 
 /*
 /start - Start communication\n
-[{"command":"start","description":"Start communication"},{"command":"goles","description":"List roles"},{"command":"shock1","description":"Shock for 1 seconds"},{"command":"shock3","description":"Shock for 3 seconds"},{"command":"shock5","description":"Shock for 5 seconds"},{"command":"shock10","description":"Shock for 10 seconds"},{"command":"shock30","description":"Shock for 30 seconds"},{"command":"state","description":"Report the cover state"},{"command":"unlock","description":"Unlock key safe"},{"command":"users","description":"Lists users in chat"},{"command":"holder","description":"Adopt holder role"},{"command":"teaser","description":"Adopt teaser role"},{"command":"guest","description":"Adopt guest role"},{"command":"waiting","description":"Make wearer waiting to be captured by the holder"},{"command":"free","description":"Make wearer free again (stops waiting for capturing by the holder)"},{"command":"capture","description":"Capture wearer as a sub"},{"command":"release","description":"Release wearer as a sub"},{"command":"_lasttimes","description":"LastOpening:1604473444; LastClosing:1604473509; LastShock:1604853044; RandomModeStart:1604847654;"},{"command":"_modes","description":"TeasingMode:1; RandomMode:0; Credits:0;"},{"command":"_userlist","description":"Charly:1157999292:Wearer/captured; Ruler:1264046045:ShockCell; S:919525040:Guest; roberta:1209481168:Holder; Spark:780464021:Teaser"}]
+[{"command":"start","description":"Start communication"},{"command":"roles","description":"List roles"},{"command":"shock1","description":"Shock for 1 seconds"},{"command":"shock3","description":"Shock for 3 seconds"},{"command":"shock5","description":"Shock for 5 seconds"},{"command":"shock10","description":"Shock for 10 seconds"},{"command":"shock30","description":"Shock for 30 seconds"},{"command":"state","description":"Report the cover state"},{"command":"unlock","description":"Unlock key safe"},{"command":"users","description":"Lists users in chat"},{"command":"holder","description":"Adopt holder role"},{"command":"teaser","description":"Adopt teaser role"},{"command":"guest","description":"Adopt guest role"},{"command":"waiting","description":"Make wearer waiting to be captured by the holder"},{"command":"free","description":"Make wearer free again (stops waiting for capturing by the holder)"},{"command":"capture","description":"Capture wearer as a sub"},{"command":"release","description":"Release wearer as a sub"},{"command":"_lasttimes","description":"LastOpening:1604473444; LastClosing:1604473509; LastShock:1604853044; RandomModeStart:1604847654;"},{"command":"_modes","description":"TeasingMode:1; RandomMode:0; Credits:0;"},{"command":"_userlist","description":"Charly:1157999292:Wearer/captured; Ruler:1264046045:ShockCell; S:919525040:Guest; roberta:1209481168:Holder; Spark:780464021:Teaser"}]
 */
 // -------------------------------------------------
 void Message::WriteCommandsAndSettings()
 {
   // This is the old way of storing the settings
-  Serial.println("*** UpdateChatDescription()");
+  // Redundant saving...
+  Serial.println("*** WriteCommandsAndSettings()");
   String info;
-  info = LAST_OPENING_TAG ":" + String(session.GetTimeOfLastOpening(), DEC) + "; ";
-  info += LAST_CLOSING_TAG ":" + String(session.GetTimeOfLastClosing(), DEC) + "; ";
-  info += LAST_SHOCK_TAG ":" + String(session.GetTimeOfLastShock(), DEC) + "; ";
-  info += RANDOM_MODE_START_TAG ":" + String(session.GetTimeOfRandomModeStart(), DEC) + "; ";
-  info += TEASING_MODE_TAG ":" + String(session.GetTeasingModeInt(), DEC) + "; ";
-  info += RANDOM_MODE_TAG ":" + String(session.GetRandomModeInt(), DEC) + "; ";
-  info += VERIFICATION_MODE_TAG ":" + String(session.GetVerificationModeInt(), DEC) + "; ";
-  info += CREDITS_TAG ":" + String(session.GetCredits(), DEC) + "; ";
-  info += USERS_PREFIX " ";
+  info = USERS_PREFIX " ";
   info += users.GetUsersInfo();
 
   // we need to make sure that the description is changed with every request and not identical to the existing one.
@@ -1090,7 +1125,6 @@ void Message::WriteCommandsAndSettings()
 
   // ----------------------------------------------
   // This is the new way of storing the settings
-  Serial.println("*** WriteCommandsAndSettings()");
   String commands = "[";
   Serial.println(botCommandsAll);
   int pos = 0;
@@ -1124,14 +1158,17 @@ void Message::WriteCommandsAndSettings()
               LAST_CLOSING_TAG ":" + String(session.GetTimeOfLastClosing(), DEC) + "; "
               LAST_SHOCK_TAG ":" + String(session.GetTimeOfLastShock(), DEC) + "; "
               RANDOM_MODE_START_TAG ":" + String(session.GetTimeOfRandomModeStart(), DEC) + "; "
+              NEXT_VERIFICATION_BEGIN_TAG ":" + String(session.GetTimeOfNextVerificationBegin(), DEC) + "; "
+              NEXT_VERIFICATION_END_TAG ":" + String(session.GetTimeOfNextVerificationEnd(), DEC) + "; "
               "\"},";
   commands += "{\"command\":\"_settingmodes\",\"description\":\""
               TEASING_MODE_TAG ":" + String(session.GetTeasingModeInt(), DEC) + "; "
               RANDOM_MODE_TAG ":" + String(session.GetRandomModeInt(), DEC) + "; "
               VERIFICATION_MODE_TAG ":" + String(session.GetVerificationModeInt(), DEC) + "; "
+              ACTUAL_VERIFICATIONS_TAG ":" + String(session.GetVerificationsToday(), DEC) + "; "
               CREDITS_TAG ":" + String(session.GetCredits(), DEC) + "; "
               "\"},";
-  commands += "{\"command\":\"_users\",\"description\":\"" +
+  commands += "{\"command\":\"_users\",\"description\":\"" " " USERS_PREFIX " " +
               users.GetUsersInfo() +
               "\"},";
 
