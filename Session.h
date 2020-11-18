@@ -15,9 +15,6 @@ class Session
 private:
   String id;
   String chatId;
-//  User wearer;
-//  User holder;
-//  User supervisor;
   bool activeChastikeySession = false;
   bool randomShockMode = false;
   bool ramdomShockOffMessage30 = false;
@@ -25,7 +22,8 @@ private:
   unsigned long randomShocksPerHour = 1;
   bool verificationMode = true;
   int verificationsPerDay = 0;
-  int verificationsToday = 0;
+  int verificationStatus = VERIFICATION_STATUS_BEFORE;
+  int actualVerificationsToday = 0;
   bool teasingMode = true;
   int credits = 0;
   String chastikeyHolder;
@@ -43,6 +41,8 @@ private:
   unsigned long timeOfRandomModeStart = 0;
   unsigned long timeOfLast5sInterval = 0;
   unsigned long timeOfLast5minInterval = 0;
+  unsigned long timeOfNextVerificationBegin = 0;
+  unsigned long timeOfNextVerificationEnd = 0;
 //  String lastShockOwner;
 //  String lastShockReason;
 
@@ -61,6 +61,7 @@ public:
 //  void SetHolderApikey(String a) { holder.SetApikey(a); }
 //  User & GetSupervisor() { return supervisor; }
 //  bool HasSupervisor() { return (supervisor.GetId().length() > 0); }
+  bool IsActiveSession();
   bool IsActiveChastikeySession() { return activeChastikeySession; }
   void SetActiveChastikeySession(bool is) { activeChastikeySession = is; }
 
@@ -110,9 +111,11 @@ public:
   int GetVerificationCountPerDay() { return verificationsPerDay; }
   void SetVerificationModeInt(int mode) { verificationMode = (mode > 0); verificationsPerDay = mode; }
   int GetVerificationModeInt() { return verificationMode ? verificationsPerDay : 0; }
-  int SetVerificationsToday(int count) { verificationsToday = count; }
-  bool GetVerificationsToday() { return verificationsToday; }
+  int SetVerificationsToday(int count) { actualVerificationsToday = count; }
+  bool GetVerificationsToday() { return actualVerificationsToday; }
   void ProcessVerification();
+  unsigned long GetTimeOfNextVerificationBegin() { return timeOfNextVerificationBegin; }
+  unsigned long GetTimeOfNextVerificationEnd() { return timeOfNextVerificationEnd; }
 
   void SetCredits(int newVal) { credits = newVal; }
   int GetCredits() { return credits; }
@@ -131,6 +134,8 @@ public:
 
   void ProcessRandomShocks();
   void ScheduleNextRandomShock();
+  void CheckVerification();
+  void ScheduleNextVerification();
 };
 
 #endif

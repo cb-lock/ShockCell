@@ -140,6 +140,12 @@ unsigned long Session::GetRemainingTime(bool forDisplay)
 }
 
 
+// ------------------------------------------------------------------------
+bool Session::IsActiveSession()
+{
+  return (! users.GetWearer()->IsFreeWearer()) || activeChastikeySession;
+}
+
 
 // ------------------------------------------------------------------------
 void Session::InfoChastikey()
@@ -259,19 +265,142 @@ int Session::SetVerificationMode(bool onOff, int count)
 
 
 // ------------------------------------------------------------------------
+void Session::ScheduleNextVerification()
+{
+  Serial.println("*** ScheduleNextVerification()");
+  Serial.print("- verifications per day: ");
+  Serial.println(GetVerificationCountPerDay());
+  // postpone scheduling until tomorrow if today's verifications have been completed
+  if (actualVerificationsToday < GetVerificationCountPerDay())
+  {
+    switch (GetVerificationCountPerDay())
+    {
+      case 0:
+      case 1:
+        Serial.println("0, 1:");
+        timeOfNextVerificationBegin = timeFunc.WakeUpTime();
+        timeOfNextVerificationEnd = timeFunc.SleepTime();
+        verificationStatus = VERIFICATION_STATUS_BEFORE;
+        break;
+      case 2:
+        Serial.println("2:");
+        if ((GetVerificationsToday() >= 1) ||
+            (timeFunc.GetTimeInSeconds() >= timeFunc.SleepTime() + DURATION_EARLY_VERIFICATION))
+        {
+          // late verification
+          timeOfNextVerificationBegin = timeFunc.SleepTime() - DURATION_LATE_VERIFICATION;
+          timeOfNextVerificationEnd = timeFunc.SleepTime();
+          verificationStatus = VERIFICATION_STATUS_BEFORE;
+        }
+        else
+        {
+          // early verification
+          timeOfNextVerificationBegin = timeFunc.WakeUpTime();
+          timeOfNextVerificationEnd = timeFunc.WakeUpTime() + DURATION_EARLY_VERIFICATION;
+          verificationStatus = VERIFICATION_STATUS_BEFORE;
+        }
+        break;
+      case 3:
+      default:
+        Serial.println("3:");
+        if ((GetVerificationsToday() >= 2) ||
+            (timeFunc.GetTimeInSeconds() >= timeFunc.SleepTime() - DURATION_LATE_VERIFICATION))
+        {
+          // late verification
+          timeOfNextVerificationBegin = timeFunc.SleepTime() - DURATION_LATE_VERIFICATION;
+          timeOfNextVerificationEnd = timeFunc.SleepTime();
+          verificationStatus = VERIFICATION_STATUS_BEFORE;
+        }
+        else if ((GetVerificationsToday() >= 1) ||
+                 (timeFunc.GetTimeInSeconds() >= timeFunc.SleepTime() + DURATION_EARLY_VERIFICATION))
+        {
+          // random verification
+          unsigned long verificationWindow = (timeFunc.SleepTime() - DURATION_LATE_VERIFICATION) - (timeFunc.WakeUpTime() + DURATION_EARLY_VERIFICATION) - 3600;
+          timeOfNextVerificationBegin = (timeFunc.GetTimeInSeconds() + random(verificationWindow*100) / 100) + 1800;
+          // 5 minute window
+          timeOfNextVerificationEnd = timeOfNextVerificationBegin + 300;
+          verificationStatus = VERIFICATION_STATUS_BEFORE;
+        }
+        else
+        {
+          // early verification
+          timeOfNextVerificationBegin = timeFunc.WakeUpTime();
+          timeOfNextVerificationEnd = timeFunc.WakeUpTime() + DURATION_EARLY_VERIFICATION;
+          verificationStatus = VERIFICATION_STATUS_BEFORE;
+        }
+        break;
+    }
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Session::CheckVerification()
+{
+  if (verificationMode)
+  {
+    if (timeFunc.GetTimeInSeconds() > timeOfNextVerificationBegin)
+    {
+      if (timeFunc.GetTimeInSeconds() < timeOfNextVerificationEnd)
+      {
+        // verification is accepted, it comes in time
+        message.SendMessage("Verification accepted " + timeFunc.Time2String(timeOfNextVerificationEnd - timeFunc.GetTimeInSeconds()) + " before the deadline.");
+        SetVerificationsToday(GetVerificationsToday() + 1);
+      }
+      else
+      {
+        // verification is late
+        message.SendMessage("Verification is not acceptable. It comes late by " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - timeOfNextVerificationEnd) + ".");
+      }
+      // schedule next verification
+      ScheduleNextVerification();
+    }
+    else
+    {
+      // verification comes early
+      message.SendMessage("Verification is not acceptable. It comes early by " + timeFunc.Time2String(timeOfNextVerificationBegin - timeFunc.GetTimeInSeconds()) + ".");
+    }
+  }
+}
+
+
+// ------------------------------------------------------------------------
 void Session::ProcessVerification()
 {
   Serial.println("*** Session::ProcessVerification()");
   Serial.print("- verificationMode: ");
   Serial.println(verificationMode);
-  if (verificationMode)
+  if (verificationMode && IsActiveSession())
   {
     // honor need for sleep
     Serial.print("- IsSleeping: ");
     Serial.println(users.GetWearer()->IsSleeping());
 
-    if (! users.GetWearer()->IsSleeping())
+    // schedule first verification at 6:00
+    if ((timeFunc.GetHours() == 6) && (timeFunc.GetMinutes() < 6))
     {
+      SetVerificationsToday(0);
+      ScheduleNextVerification();
+    }
+    else if (! users.GetWearer()->IsSleeping())
+    {
+      if (timeFunc.GetTimeInSeconds() > timeOfNextVerificationEnd)
+      {
+        if (verificationStatus == VERIFICATION_STATUS_WAITING)
+        {
+          // angry smiling symbols
+          message.SendMessage("\xf0\x9f\x98\xa1\xf0\x9f\x98\xa1\xf0\x9f\x98\xa1 Verification request has expired!!! Wearer " + users.GetWearer()->GetName() + " has failed to provide a verification in time!");
+          ScheduleNextVerification();
+          verificationStatus = VERIFICATION_STATUS_BEFORE;
+        }
+      }
+      else if (timeFunc.GetTimeInSeconds() > timeOfNextVerificationBegin)
+      {
+        // devil smiling symbol
+        message.SendMessage("\xf0\x9f\x98\x88 Verification request - wearer " + users.GetWearer()->GetName() + " must provide a verification within " + 
+                            timeFunc.Time2String(timeOfNextVerificationEnd - timeOfNextVerificationBegin) + " from now!");
+        verificationStatus = VERIFICATION_STATUS_WAITING;
+      }
     }
   }
 }

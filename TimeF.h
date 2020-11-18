@@ -9,14 +9,20 @@ class TimeFunctions
 private:
 public:
   String Time2String(const long seconds);
-  long GetTimeInSeconds();
+  String Time2StringNoDays(const long seconds);
+  unsigned long GetTimeInSeconds();
   int GetHours();
   int GetMinutes();
+  unsigned long GetMidnightToday();
+  int GetDayOfWeek() { return (((GetTimeInSeconds() / 86400L) + 3) % 7); }
   bool IsWeekend();
   bool IsSleepingTime();
+  unsigned long WakeUpTime();
+  unsigned long SleepTime();
   bool SleepingTimeJustChanged(bool started);
   String GetTimeString(unsigned long t = 0);
   void SetClock();
+  void ProcessSleepTime();
 };
 
 #endif

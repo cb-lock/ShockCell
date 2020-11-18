@@ -140,6 +140,7 @@ void setup()
 
   session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
   session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
+  session.ScheduleNextVerification();
 }
 
 
@@ -181,31 +182,7 @@ void loop()
   {
 //    mistress.CheckOffline();
     session.ProcessVerification();
-
-    // has the sleeping period just begun?
-    if (users.GetHolder())
-    {
-      bool wasSleeping = users.GetWearer()->IsSleeping();
-      if (timeFunc.SleepingTimeJustChanged(true))
-      {
-        users.GetWearer()->SetSleeping(true);
-//        if (! wasSleeping)
-        {
-          msg = "Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.";
-          message.SendMessage(msg);
-        }
-      }
-      // has the sleeping period just ended?
-      if (timeFunc.SleepingTimeJustChanged(false))
-      {
-        users.GetWearer()->SetSleeping(false);
-        if (wasSleeping)
-        {
-          msg = "Good morning "  + users.GetWearer()->GetName() + ", wake up boy!";
-          message.SendMessage(msg);
-        }
-      }
-    }
+    timeFunc.ProcessSleepTime();
 
     if (session.GetEmergencyReleaseCounterRequest())
     {

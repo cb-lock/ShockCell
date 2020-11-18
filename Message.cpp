@@ -179,7 +179,12 @@ void Message::MessageModes(String chatId)
   SendMessage(msg, chatId);
 
   if (session.IsVerificationMode())
-    msg = "Verification mode is activated. The wearer must send " + String(session.GetVerificationCountPerDay(), DEC) + " verification photos per day as requested.";
+  {
+    msg = "Verification mode is activated. The wearer must send " + String(session.GetVerificationCountPerDay(), DEC) + 
+          " verification photos per day as requested. He has provided " + String(session.GetVerificationsToday(), DEC) + " photos today.";
+    if (session.GetVerificationCountPerDay() <= 2)
+      msg += " The next verification photo is due between " + timeFunc.Time2StringNoDays(session.GetTimeOfNextVerificationBegin()) + " and " + timeFunc.Time2StringNoDays(session.GetTimeOfNextVerificationEnd()) + ".";
+  }
   else
     msg = "Verification mode is switched off.";
   SendMessage(msg, chatId);
@@ -636,6 +641,13 @@ void Message::VerificationModeAction(String commandParameter, String fromId, Str
         SendMessage(msg, chatId);
       }
     }
+    else
+    {
+      if (u->IsWearer() && ! wearerMayUseCommand)
+        SendMessage("User " + u->GetName() + " has no rights to switch off the verification mode or set levels below " + verificationsPerDay + " verifications per day. Only the holder and teasers are allowed to do this.");
+      else
+        SendMessage("User " + u->GetName() + " has no rights to switch on the verification mode. Only the holder, teasers and the wearer are allowed to do this.");
+    }
   }
 }
 
@@ -706,7 +718,7 @@ void Message::CheckVerificationAction(String caption, String fromId, String chat
        (caption.indexOf("verify") != -1) ||
        (caption.indexOf("proof") != -1)))
   {
-    SendMessage("Verification photo detected.", chatId);
+    session.CheckVerification();
   }
 }
 
@@ -893,6 +905,10 @@ void Message::ProcessNewMessages()
         WriteCommandsAndSettings();
       else if (text == "/restartshockcell")
         RestartRequest(from_id, chat_id);
+      else if (text == "/test")
+        SendMessage(SYMBOL_LOCK_CLOSED SYMBOL_LOCK_OPEN SYMBOL_LOCK_KEY SYMBOL_KEY SYMBOL_MOON SYMBOL_SUN SYMBOL_WATCHING_EYES SYMBOL_POLICEMAN SYMBOL_QUEEN SYMBOL_DEVIL_SMILE
+                    SYMBOL_DEVIL_ANGRY SYMBOL_BELL SYMBOL_TWO_CHAIN_LINKS SYMBOL_CLOCK_3 SYMBOL_SMILY_SMILE SYMBOL_SMILY_WINK SYMBOL_SMILE_OHOH SYMBOL_FORBIDDEN SYMBOL_CUSTOMS
+                    SYMBOL_STOP SYMBOL_OK SYMBOL_EYE SYMBOL_SUN SYMBOL_NO_ENTRY SYMBOL_CHAINS, from_id);
       else if (text.substring(0, 1) == "/")
         UnknownCommand(chat_id);
       else if (hasPhoto)
@@ -1100,6 +1116,25 @@ void Message::WriteCommandsAndSettings()
     }
     pos++;
   }
+
+  // write setting times
+  commands += "{\"command\":\"_settingtimes\",\"description\":\""
+              LAST_OPENING_TAG ":" + String(session.GetTimeOfLastOpening(), DEC) + "; "
+              LAST_OPENING_TAG ":" + String(session.GetTimeOfLastOpening(), DEC) + "; "
+              LAST_CLOSING_TAG ":" + String(session.GetTimeOfLastClosing(), DEC) + "; "
+              LAST_SHOCK_TAG ":" + String(session.GetTimeOfLastShock(), DEC) + "; "
+              RANDOM_MODE_START_TAG ":" + String(session.GetTimeOfRandomModeStart(), DEC) + "; "
+              "\"},";
+  commands += "{\"command\":\"_settingmodes\",\"description\":\""
+              TEASING_MODE_TAG ":" + String(session.GetTeasingModeInt(), DEC) + "; "
+              RANDOM_MODE_TAG ":" + String(session.GetRandomModeInt(), DEC) + "; "
+              VERIFICATION_MODE_TAG ":" + String(session.GetVerificationModeInt(), DEC) + "; "
+              CREDITS_TAG ":" + String(session.GetCredits(), DEC) + "; "
+              "\"},";
+  commands += "{\"command\":\"_users\",\"description\":\"" +
+              users.GetUsersInfo() +
+              "\"},";
+
   // remove last comma
   commands.remove(commands.length() - 1);
   commands += "]";

@@ -1,7 +1,14 @@
 #include <time.h>
 #include "Defs.h"
 #include "TimeF.h"
+#include "Message.h"
+#include "Session.h"
+#include "User.h"
 
+
+extern Message message;
+extern Session session;
+extern UserSet users;
 
 
 // ------------------------------------------------------------------------
@@ -10,7 +17,7 @@ bool TimeFunctions::IsWeekend()
   Serial.println("*** IsWeekend()");
   Serial.print("- day of week: ");
   // 0 Monday, 6 Sunday
-  int dayOfWeek = ((GetTimeInSeconds() / 86400L) + 5) % 7;
+  int dayOfWeek = GetDayOfWeek();
   Serial.println(dayOfWeek);
 
   if (dayOfWeek < 5)
@@ -39,7 +46,40 @@ String TimeFunctions::Time2String(const long seconds)
 
 
 // ------------------------------------------------------------------------
-long TimeFunctions::GetTimeInSeconds()
+String TimeFunctions::Time2StringNoDays(const long seconds)
+{
+  return Time2String((seconds % 86400) + UTC_OFFSET*3600);
+}
+
+
+// ------------------------------------------------------------------------
+unsigned long TimeFunctions::GetMidnightToday()
+{
+  time_t nowSecs = GetTimeInSeconds();
+  struct tm timeinfo;
+  gmtime_r(&nowSecs, &timeinfo);
+  int hours = (timeinfo.tm_hour + UTC_OFFSET) % 24;
+  return GetTimeInSeconds() - (hours*3600 + timeinfo.tm_min*60 + timeinfo.tm_sec);
+}
+
+
+// ------------------------------------------------------------------------
+unsigned long TimeFunctions::WakeUpTime()
+{
+  int sleepingExtension = IsWeekend() ? 3 : 0;
+  return GetMidnightToday() + 3600*(SLEEP_TIME_END_WORKDAYS + sleepingExtension);
+}
+
+
+// ------------------------------------------------------------------------
+unsigned long TimeFunctions::SleepTime()
+{
+  return GetMidnightToday() + 3600*SLEEP_TIME_BEGIN;
+}
+
+
+// ------------------------------------------------------------------------
+unsigned long TimeFunctions::GetTimeInSeconds()
 {
   time_t nowSecs = time(nullptr);
   return nowSecs;
@@ -75,11 +115,22 @@ bool TimeFunctions::IsSleepingTime()
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
   int hours = (timeinfo.tm_hour + UTC_OFFSET) % 24;
-  unsigned long sleepingExtension = IsWeekend() ? 3*3600L : 0;
+  int sleepingExtension = IsWeekend() ? 3 : 0;
   Serial.print("- sleepingExtension: ");
   Serial.println(sleepingExtension);
+  Serial.print("- hours: ");
+  Serial.println(hours);
+  //
+  unsigned long sinceMidnight = GetMidnightToday();
+  Serial.print("- sinceMidnight: ");
+  Serial.println(sinceMidnight);
+  Serial.println(GetTimeString(sinceMidnight));
+  Serial.print("- now: ");
+  Serial.println(GetTimeInSeconds());
+  Serial.println(GetTimeString(GetTimeInSeconds()));
+  //
 
-  if ((hours < SLEEP_TIME_END + sleepingExtension) || (hours >= SLEEP_TIME_BEGIN))
+  if ((hours < SLEEP_TIME_END_WORKDAYS + sleepingExtension) || (hours >= SLEEP_TIME_BEGIN))
     return true;
   else
     return false;
@@ -106,7 +157,7 @@ bool TimeFunctions::SleepingTimeJustChanged(bool started)
   // sleeping time just ended?
   else
   {
-    if ((hours == SLEEP_TIME_END) && (timeinfo.tm_min < 6))
+    if ((hours == SLEEP_TIME_END_WORKDAYS) && (timeinfo.tm_min < 6))
       return true;
     else
       return false;
@@ -156,6 +207,52 @@ void TimeFunctions::SetClock()
   Serial.println(nowSecs);
   Serial.print(F("Current time: "));
   Serial.print(asctime(&timeinfo));
+}
+
+
+// ------------------------------------------------------------------------
+void TimeFunctions::ProcessSleepTime()
+{
+  Serial.println("*** ProcessSleepTime()");
+  if (session.IsActiveSession())
+  {
+    Serial.println("- active session.");
+    // we assume an active session here
+    if (IsSleepingTime() && (! users.GetWearer()->IsSleeping()))
+    {
+      // Go to sleep
+      users.GetWearer()->SetSleeping(true);
+      message.SendMessage("Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.");
+    }
+    if ((! IsSleepingTime()) && users.GetWearer()->IsSleeping())
+    {
+      // Wake up
+      users.GetWearer()->SetSleeping(false);
+      message.SendMessage("Good morning "  + users.GetWearer()->GetName() + ", wake up boy!");
+    }
+  }
+/*
+  bool wasSleeping = users.GetWearer()->IsSleeping();
+  if (timeFunc.SleepingTimeJustChanged(true))
+  {
+    users.GetWearer()->SetSleeping(true);
+//        if (! wasSleeping)
+    {
+      msg = "Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.";
+      message.SendMessage(msg);
+    }
+  }
+  // has the sleeping period just ended?
+  if (timeFunc.SleepingTimeJustChanged(false))
+  {
+    users.GetWearer()->SetSleeping(false);
+    if (wasSleeping)
+    {
+      msg = "Good morning "  + users.GetWearer()->GetName() + ", wake up boy!";
+      message.SendMessage(msg);
+    }
+  }
+  */
 }
 
 
