@@ -111,8 +111,8 @@ public:
   int GetVerificationCountPerDay() { return verificationsPerDay; }
   void SetVerificationModeInt(int mode) { verificationMode = (mode > 0); verificationsPerDay = mode; }
   int GetVerificationModeInt() { return verificationMode ? verificationsPerDay : 0; }
-  int SetVerificationsToday(int count) { actualVerificationsToday = count; }
-  bool GetVerificationsToday() { return actualVerificationsToday; }
+  void SetVerificationsToday(int count) { actualVerificationsToday = count; }
+  int GetVerificationsToday() { return actualVerificationsToday; }
   void ProcessVerification();
   unsigned long GetTimeOfNextVerificationBegin() { return timeOfNextVerificationBegin; }
   void SetTimeOfNextVerificationBegin(unsigned long theTime) { timeOfNextVerificationBegin = theTime; }

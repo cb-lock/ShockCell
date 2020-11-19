@@ -173,7 +173,8 @@ void Message::MessageModes(String chatId)
   {
     msg = "Verification mode is activated. The wearer must send " + String(session.GetVerificationCountPerDay(), DEC) + 
           " verification photos per day as requested. He has provided " + String(session.GetVerificationsToday(), DEC) + " photos today.";
-    if (session.GetVerificationCountPerDay() <= 2)
+    if ((session.GetVerificationCountPerDay() <= 2) ||
+        ())
       msg += " The next verification photo is due between " + timeFunc.Time2StringNoDays(session.GetTimeOfNextVerificationBegin()) + " and " + timeFunc.Time2StringNoDays(session.GetTimeOfNextVerificationEnd()) + ".";
   }
   else
@@ -896,6 +897,8 @@ void Message::ProcessNewMessages()
       //        RestrictUserAction(from_id, chat_id);
       else if (text == "/thisisanemergency")
         EmergencyAction(from_id, chat_id);
+      else if (text == "/readsettings")
+        AdoptChatDescription();
       else if (text == "/writesettings")
         WriteCommandsAndSettings();
       else if (text == "/restartshockcell")
@@ -966,20 +969,19 @@ unsigned long Message::ReadParamLong(String text, String id)
   */
   int paramPos = text.indexOf(id);
   text = text.substring(paramPos);
-  //  Serial.print(text);
-  //  Serial.println();
+  Serial.print(text);
+  Serial.println();
   int nextColon = text.indexOf(':');
-  //  Serial.print(nextColon);
-  //  Serial.println();
+  Serial.print(nextColon);
+  Serial.println();
   int nextSemi = text.indexOf(';');
-  //  Serial.print(nextSemi);
-  //  Serial.println();
+  Serial.print(nextSemi);
+  Serial.println();
   String value = text.substring(nextColon + 1, nextSemi);
-  /*
-    Serial.println("=============");
-    Serial.println(value);
-    Serial.println("=============");
-  */
+  Serial.println("=============");
+  Serial.println(value);
+  Serial.println(atol(value.c_str()));
+  Serial.println("=============");
   return atol(value.c_str());
 }
 
@@ -1082,13 +1084,13 @@ void Message::AdoptChatDescription()
 
     session.SetTeasingModeInt(ReadParamLong(descr, TEASING_MODE_TAG));
     session.SetRandomModeInt(ReadParamLong(descr, RANDOM_MODE_TAG));
-    Serial.print("- Random Mode: ");
+    Serial.print("- random Mode: ");
     Serial.println(session.IsRandomMode());
-    Serial.print("- Random Mode cycle: ");
+    Serial.print("- random Mode cycle: ");
     Serial.println(session.GetRandomModeShocksPerHour());
   //  session.SetRandomMode(false, 5);
     session.SetVerificationModeInt(ReadParamLong(descr, VERIFICATION_MODE_TAG));
-    session.SetVerificationsToday(ReadParamLong(descr, ACTUAL_VERIFICATIONS_TAG));
+    session.SetVerificationsToday((int) ReadParamLong(descr, ACTUAL_VERIFICATIONS_TAG));
     session.SetCredits(ReadParamLong(descr, CREDITS_TAG));
     //  info += users.GetUsersInfo();
     AdoptUserInfos(descr);

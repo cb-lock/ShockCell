@@ -271,7 +271,7 @@ void Session::ScheduleNextVerification()
   Serial.print("- verifications per day: ");
   Serial.println(GetVerificationCountPerDay());
   // postpone scheduling until tomorrow if today's verifications have been completed
-  if (actualVerificationsToday < GetVerificationCountPerDay())
+  if (GetVerificationsToday() < GetVerificationCountPerDay())
   {
     switch (GetVerificationCountPerDay())
     {
@@ -317,8 +317,8 @@ void Session::ScheduleNextVerification()
           // random verification
           unsigned long verificationWindow = (timeFunc.SleepTime() - DURATION_LATE_VERIFICATION) - (timeFunc.WakeUpTime() + DURATION_EARLY_VERIFICATION) - 3600;
           timeOfNextVerificationBegin = (timeFunc.GetTimeInSeconds() + random(verificationWindow*100) / 100) + 1800;
-          // 5 minute window
-          timeOfNextVerificationEnd = timeOfNextVerificationBegin + 300;
+          // 15 minute window
+          timeOfNextVerificationEnd = timeOfNextVerificationBegin + 900;
           verificationStatus = VERIFICATION_STATUS_BEFORE;
         }
         else
@@ -337,23 +337,27 @@ void Session::ScheduleNextVerification()
 // ------------------------------------------------------------------------
 void Session::CheckVerification()
 {
+  Serial.println("*** CheckVerification()");
   if (verificationMode)
   {
+    Serial.println("- verification mode: true");
     if (timeFunc.GetTimeInSeconds() > timeOfNextVerificationBegin)
     {
       if (timeFunc.GetTimeInSeconds() < timeOfNextVerificationEnd)
       {
         // verification is accepted, it comes in time
         message.SendMessage("Verification accepted " + timeFunc.Time2String(timeOfNextVerificationEnd - timeFunc.GetTimeInSeconds()) + " before the deadline.");
+        Serial.print("- actual verifications before check-in: ");
+        Serial.println(GetVerificationsToday());
         SetVerificationsToday(GetVerificationsToday() + 1);
+        Serial.print("- actual verifications after check-in: ");
+        Serial.println(GetVerificationsToday());
       }
       else
       {
         // verification is late
         message.SendMessage("Verification is not acceptable. It comes late by " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - timeOfNextVerificationEnd) + ".");
       }
-      // schedule next verification
-      ScheduleNextVerification();
     }
     else
     {
@@ -379,13 +383,16 @@ void Session::ProcessVerification()
     // schedule first verification at 6:00
     if ((timeFunc.GetHours() == 6) && (timeFunc.GetMinutes() < 6))
     {
+      Serial.println("- schedule first verification");
       SetVerificationsToday(0);
       ScheduleNextVerification();
     }
     else if (! users.GetWearer()->IsSleeping())
     {
+      Serial.println("- wearer is awake");
       if (timeFunc.GetTimeInSeconds() > timeOfNextVerificationEnd)
       {
+        Serial.println("- verification window ends");
         if (verificationStatus == VERIFICATION_STATUS_WAITING)
         {
           // angry smiling symbols
@@ -396,9 +403,11 @@ void Session::ProcessVerification()
       }
       else if (timeFunc.GetTimeInSeconds() > timeOfNextVerificationBegin)
       {
+        Serial.println("- verification window begins");
         // devil smiling symbol
-        message.SendMessage("\xf0\x9f\x98\x88 Verification request - wearer " + users.GetWearer()->GetName() + " must provide a verification within " + 
-                            timeFunc.Time2String(timeOfNextVerificationEnd - timeOfNextVerificationBegin) + " from now!");
+        if (verificationStatus != VERIFICATION_STATUS_WAITING)
+          message.SendMessage("\xf0\x9f\x98\x88 Verification request - wearer " + users.GetWearer()->GetName() + " must provide a verification within " + 
+                              timeFunc.Time2String(timeOfNextVerificationEnd - timeOfNextVerificationBegin) + " from now!");
         verificationStatus = VERIFICATION_STATUS_WAITING;
       }
     }

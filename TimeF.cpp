@@ -14,11 +14,11 @@ extern UserSet users;
 // ------------------------------------------------------------------------
 bool TimeFunctions::IsWeekend()
 {
-  Serial.println("*** IsWeekend()");
-  Serial.print("- day of week: ");
+//  Serial.println("*** IsWeekend()");
+//  Serial.print("- day of week: ");
   // 0 Monday, 6 Sunday
   int dayOfWeek = GetDayOfWeek();
-  Serial.println(dayOfWeek);
+//  Serial.println(dayOfWeek);
 
   if (dayOfWeek < 5)
     return false;
@@ -217,6 +217,10 @@ void TimeFunctions::ProcessSleepTime()
   if (session.IsActiveSession())
   {
     Serial.println("- active session.");
+    Serial.print("- sleep time: ");
+    Serial.println(IsSleepingTime() ? "true" : "false");
+    Serial.print("- wearer sleeps: ");
+    Serial.println(users.GetWearer()->IsSleeping());
     // we assume an active session here
     if (IsSleepingTime() && (! users.GetWearer()->IsSleeping()))
     {
