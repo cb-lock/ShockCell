@@ -364,6 +364,10 @@ void Session::ScheduleNextVerification()
         }
         break;
     }
+    Serial.print("- timeOfNextVerificationBegin: ");
+    Serial.println(timeFunc.Time2String(timeOfNextVerificationBegin));
+    Serial.print("- timeOfNextVerificationEnd: ");
+    Serial.println(timeFunc.Time2String(timeOfNextVerificationEnd));
   }
 }
 
@@ -385,6 +389,7 @@ void Session::CheckVerification()
         Serial.print("- actual verifications before check-in: ");
         Serial.println(GetVerificationsToday());
         SetVerificationsToday(GetVerificationsToday() + 1);
+        verificationStatus = VERIFICATION_STATUS_BEFORE;
         Serial.print("- actual verifications after check-in: ");
         Serial.println(GetVerificationsToday());
       }
