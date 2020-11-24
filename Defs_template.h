@@ -87,6 +87,15 @@
 #define SYMBOL_SUN "\xf0\x9f\x8c\x9e"
 #define SYMBOL_NO_ENTRY "\xe2\x9b\x94"
 #define SYMBOL_CHAINS "\xe2\x9b\x93"
+#define SYMBOL_STAR "\xe2\xad\x90"
+#define SYMBOL_DOUGHNUT "\xf0\x9f\x8d\xa9"
+#define SYMBOL_DICE "\xf0\x9f\x8e\xb2"
+#define SYMBOL_CRICKET_BAT "\xf0\x9f\x8f\x8f"
+#define SYMBOL_COLLISION "\xf0\x9f\x92\xa5"
+#define SYMBOL_SLEEPING "\xf0\x9f\x92\xa4"
+#define SYMBOL_SPLASHING_SWEAT "\xf0\x9f\x92\xa6"
+
+#define SYMBOL_CREDIT SYMBOL_STAR
 
 
 // ---------------------------------
@@ -105,6 +114,7 @@
 #define VERIFICATION_MODE_TAG "VEMO"
 #define CREDITS_TAG "CRED"
 //#define CREDITS_TAG "Credits"
+#define FAILURES_TAG "FAIL"
 
 // ---------------------------------
 

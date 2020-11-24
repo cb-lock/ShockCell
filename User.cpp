@@ -85,19 +85,6 @@ void User::SetBot(bool is)
 
 
 // ------------------------------------------------------------------------
-bool User::IsSleeping()
-{
-  // 23:00 - 5:59 is mandatory sleeping time
-  int hours = timeFunc.GetHours();
-  if ((hours < 6) || (hours > 22))
-    return true;
-  // else check the state
-  else
-    return sleeping;
-}
-
-
-// ------------------------------------------------------------------------
 int UserSet::AddUser(String id, String name, int roleId, bool isBot)
 {
   Serial.println("*** UserSet::AddUser()");

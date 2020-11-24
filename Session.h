@@ -26,6 +26,9 @@ private:
   int actualVerificationsToday = 0;
   bool teasingMode = true;
   int credits = 0;
+  int creditFractions = 0;
+  int deviations = 0;
+  int failures = 0;
   String chastikeyHolder;
   unsigned long endTime;
   String endTimeStr;
@@ -120,7 +123,15 @@ public:
   void SetTimeOfNextVerificationEnd(unsigned long theTime) { timeOfNextVerificationEnd = theTime; }
 
   void SetCredits(int newVal) { credits = newVal; }
+  void SetCredits(int newVal, String chatId);
   int GetCredits() { return credits; }
+  void SetCreditFractions(int newVal);
+  void SetCreditFractions(int newVal, String chatId);
+  int GetCreditFractions() { return creditFractions; }
+  void SetDeviations(int newVal) { deviations = newVal; }
+  int GetDeviations() { return deviations; }
+  void SetFailures(int newVal) { failures = newVal; }
+  int GetFailures() { return failures; }
 
   void SetEmergencyReleaseCounter(int newVal) { emergencyReleaseCounter = newVal; emergencyReleaseCounterRequest = false; }
   int GetEmergencyReleaseCounter() { return emergencyReleaseCounter; }

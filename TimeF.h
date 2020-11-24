@@ -10,6 +10,7 @@ private:
 public:
   String Time2String(const long seconds);
   String Time2StringNoDays(const long seconds);
+  String Time2StringNoDaysCompact(const long seconds);
   unsigned long GetTimeInSeconds();
   int GetHours();
   int GetMinutes();

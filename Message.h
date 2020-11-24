@@ -6,6 +6,7 @@
 #include "User.h"
 
 #define USERS_PREFIX "USERS:"
+#define CHATS_PREFIX "CHATS:"
 
 extern String knownUserId[USER_CACHE_SIZE];
 extern String knownUserName[USER_CACHE_SIZE];
@@ -34,6 +35,7 @@ public:
   void MessageIsOpen(String chatId);
   void MessageCoverStateChange(String chatId=GROUP_CHAT_ID);
   void MessageCoverState(String chatId=GROUP_CHAT_ID);
+  void MessageSendEarnedCredits(int creditsEarned, String chatId=GROUP_CHAT_ID);
   void MessageModes(String chatId=GROUP_CHAT_ID);
   void MessageUsers(String chatId=GROUP_CHAT_ID);
   void MessageRoles(String chatId=GROUP_CHAT_ID);

@@ -7,6 +7,7 @@
 #include "EServer.h"
 #include "Message.h"
 #include "Session.h"
+#include "Chat.h"
 #include "User.h"
 
 // ---------------------------------
@@ -22,7 +23,7 @@ EmlaServer emlaServer(oledDisplay);
 Message message;
 Session session;
 
-ChatGroup chatGroup;
+ChatSet chats;
 UserSet users;
 
 unsigned long lastTimeBotRan;

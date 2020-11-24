@@ -53,6 +53,20 @@ String TimeFunctions::Time2StringNoDays(const long seconds)
 
 
 // ------------------------------------------------------------------------
+String TimeFunctions::Time2StringNoDaysCompact(const long seconds)
+{
+  String str = Time2String((seconds % 86400) + UTC_OFFSET*3600);
+  int pos = str.indexOf('h');
+  if (pos >= 0)
+    str.remove(pos, 2);
+  pos = str.indexOf('m');
+  if (pos >= 0)
+    str.remove(pos, 1);
+  return str;
+}
+
+
+// ------------------------------------------------------------------------
 unsigned long TimeFunctions::GetMidnightToday()
 {
   time_t nowSecs = GetTimeInSeconds();

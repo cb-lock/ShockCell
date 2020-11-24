@@ -141,6 +141,39 @@ unsigned long Session::GetRemainingTime(bool forDisplay)
 
 
 // ------------------------------------------------------------------------
+void Session::SetCredits(int newVal, String chatId)
+{
+  int creditCount = GetCredits();
+  SetCredits(newVal);
+  if (GetCredits() > creditCount)
+    message.SendMessage(String(SYMBOL_CREDIT) + " Wearer received " + (GetCredits() > creditCount) + " credits.", chatId);
+}
+
+
+// ------------------------------------------------------------------------
+void Session::SetCreditFractions(int newVal)
+{
+  creditFractions = newVal;
+  if (creditFractions >= 10)
+  {
+    int newCredits = creditFractions / 10;
+    creditFractions = creditFractions % 10;
+    SetCredits(GetCredits() + newCredits);
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Session::SetCreditFractions(int newVal, String chatId)
+{
+  int creditCount = GetCredits();
+  SetCreditFractions(newVal);
+  if (GetCredits() > creditCount)
+    message.SendMessage(String(SYMBOL_CREDIT) + " Wearer received " + (GetCredits() > creditCount) + " credits.", chatId);
+}
+
+
+// ------------------------------------------------------------------------
 bool Session::IsActiveSession()
 {
   return (! users.GetWearer()->IsFreeWearer()) || activeChastikeySession;
@@ -153,7 +186,7 @@ void Session::InfoChastikey()
   String payload;
 
   Serial.print("*** Session::InfoChastikey()");
-
+/*
   int trial = 0;
   bool success = false;
   while ((trial < 10) && ! success)
@@ -205,6 +238,7 @@ void Session::InfoChastikey()
   }
   Serial.print("- Chastikey session: ");
   Serial.println(IsActiveChastikeySession());
+  */
 }
 
 
@@ -337,6 +371,7 @@ void Session::ScheduleNextVerification()
 // ------------------------------------------------------------------------
 void Session::CheckVerification()
 {
+  String msg;
   Serial.println("*** CheckVerification()");
   if (verificationMode)
   {
@@ -356,13 +391,18 @@ void Session::CheckVerification()
       else
       {
         // verification is late
-        message.SendMessage("Verification is not acceptable. It comes late by " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - timeOfNextVerificationEnd) + ".");
+        SetDeviations(GetDeviations() + 1);
+        message.SendMessage(SYMBOL_DEVIL_ANGRY " Verification is not acceptable. It comes late by " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - timeOfNextVerificationEnd) + ".");
       }
     }
     else
     {
       // verification comes early
-      message.SendMessage("Verification is not acceptable. It comes early by " + timeFunc.Time2String(timeOfNextVerificationBegin - timeFunc.GetTimeInSeconds()) + ".");
+      SetDeviations(GetDeviations() + 1);
+      msg = SYMBOL_DEVIL_SMILE " Verification is not acceptable.";
+      if (GetVerificationCountPerDay() <= 2)
+        msg += " It comes early by " + timeFunc.Time2String(timeOfNextVerificationBegin - timeFunc.GetTimeInSeconds()) + ".";
+      message.SendMessage(SYMBOL_DEVIL_SMILE " Verification is not acceptable.");
     }
   }
 }
@@ -396,7 +436,8 @@ void Session::ProcessVerification()
         if (verificationStatus == VERIFICATION_STATUS_WAITING)
         {
           // angry smiling symbols
-          message.SendMessage("\xf0\x9f\x98\xa1\xf0\x9f\x98\xa1\xf0\x9f\x98\xa1 Verification request has expired!!! Wearer " + users.GetWearer()->GetName() + " has failed to provide a verification in time!");
+          SetFailures(GetFailures() + 1);
+          message.SendMessage(SYMBOL_DEVIL_ANGRY SYMBOL_DEVIL_ANGRY SYMBOL_DEVIL_ANGRY " Verification request has expired!!! Wearer " + users.GetWearer()->GetName() + " has failed to provide a verification in time!");
           ScheduleNextVerification();
           verificationStatus = VERIFICATION_STATUS_BEFORE;
         }
@@ -406,7 +447,7 @@ void Session::ProcessVerification()
         Serial.println("- verification window begins");
         // devil smiling symbol
         if (verificationStatus != VERIFICATION_STATUS_WAITING)
-          message.SendMessage("\xf0\x9f\x98\x88 Verification request - wearer " + users.GetWearer()->GetName() + " must provide a verification within " + 
+          message.SendMessage(SYMBOL_DEVIL_SMILE " Verification request - wearer " + users.GetWearer()->GetName() + " must provide a verification within " + 
                               timeFunc.Time2String(timeOfNextVerificationEnd - timeOfNextVerificationBegin) + " from now!");
         verificationStatus = VERIFICATION_STATUS_WAITING;
       }

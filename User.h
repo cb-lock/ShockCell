@@ -95,18 +95,10 @@ public:
   bool MayBecomeTeaser() { return (IsHolder() || IsTeaser() || IsGuest()); }
   bool MayBecomeHolder();
   bool MayUnlock() { return (IsFreeWearer() || IsWaitingWearer() || IsHolder()); }
-  bool IsSleeping();
+  bool IsSleeping() { return sleeping; }
   void SetSleeping(bool s) { sleeping = s; }
   unsigned long LastMessageTime() { return lastMessageTime; }
   void SetLastMessageTime(unsigned int now) { lastMessageTime = now; }
-};
-
-
-
-class ChatGroup : public User
-{
-public:
-  ChatGroup() {}
 };
 
 
