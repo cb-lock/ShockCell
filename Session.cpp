@@ -351,8 +351,8 @@ void Session::ScheduleNextVerification()
           // random verification
           unsigned long verificationWindow = (timeFunc.SleepTime() - DURATION_LATE_VERIFICATION) - (timeFunc.WakeUpTime() + DURATION_EARLY_VERIFICATION) - 3600;
           timeOfNextVerificationBegin = (timeFunc.GetTimeInSeconds() + random(verificationWindow*100) / 100) + 1800;
-          // 15 minute window
-          timeOfNextVerificationEnd = timeOfNextVerificationBegin + 900;
+          // 15 minute window with 30 seconds margin
+          timeOfNextVerificationEnd = timeOfNextVerificationBegin + 930;
           verificationStatus = VERIFICATION_STATUS_BEFORE;
         }
         else
