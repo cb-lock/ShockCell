@@ -7,11 +7,12 @@
 #include "Defs.h"
 
 
-
 #define KEEP_TIMESTAMP false
 #define UPDATE_TIMESTAMP true
 
+#define CHAT_CACHE_SIZE 10
 #define CHAT_NONE -1
+
 
 
 class ChatSet;

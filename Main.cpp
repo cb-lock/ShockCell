@@ -21,6 +21,7 @@ int oldCoverState = 0;
 TimeFunctions timeFunc;
 EmlaServer emlaServer(oledDisplay);
 Message message;
+Verification verification;
 Session session;
 
 ChatSet chats;
@@ -62,7 +63,7 @@ void setup()
   // 2000*60 = 120000
   // 10000*60 = 600000
   // void timerAlarmWrite(hw_timer_t *timer, uint64_t alarm_value, bool autoreload)
-  timerAlarmWrite(watchdogTimer, 1200000, false); //set time in us
+  timerAlarmWrite(watchdogTimer, 1200000L, false); //set time in us
   // void timerAlarmEnable(hw_timer_t *timer)
   timerAlarmEnable(watchdogTimer); //enable interrupt
 
@@ -136,12 +137,11 @@ void setup()
   coverState = digitalRead(COVER_OPEN_PIN);
   oldCoverState = coverState;
 
+  verification.Init();
   message.Init();
   session.InfoChastikey();
-
   session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
   session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
-  session.ScheduleNextVerification();
 }
 
 
@@ -178,12 +178,20 @@ void loop()
     session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
   }
 
+  // every 1 minute
+  if (timeFunc.GetTimeInSeconds() >= (session.GetTimeOfLast1minInterval() + 60))
+  {
+    verification.ProcessVerification(GROUP_CHAT_ID);
+    timeFunc.ProcessSleepTime();
+    
+    session.SetTimeOfLast1minInterval(timeFunc.GetTimeInSeconds());
+  }
+
   // every 5 minutes
   if (timeFunc.GetTimeInSeconds() >= (session.GetTimeOfLast5minInterval() + 5*60))
   {
+    verification.Schedule();
 //    mistress.CheckOffline();
-    session.ProcessVerification();
-    timeFunc.ProcessSleepTime();
 
     if (session.GetEmergencyReleaseCounterRequest())
     {

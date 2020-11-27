@@ -18,6 +18,7 @@ extern int oldCoverState;
 extern ChatSet chats;
 extern UserSet users;
 extern Session session;
+extern Verification verification;
 
 
 
@@ -34,7 +35,7 @@ UniversalTelegramBot bot(BOT_TOKEN, clientsec);
 #define BOT_COMMANDS_SHOCKS "/shock_1 - Shock for 1 second (other intervals work with corresponding numbers)\n/shock_5 - Shock for 5 seconds (other intervals work with corresponding numbers)\n/shock_10 - Shock for 10 seconds (other intervals work with corresponding numbers)\n/shock_30 - Shock for 30 seconds (other intervals work with corresponding numbers)\n"
 #define BOT_COMMANDS_RANDOM "/random_5 - Switch on random shock mode with 5 shocks per hour (other intervals work with corresponding numbers)\n/random_off - Switch off random shock mode\n"
 #define BOT_COMMANDS_TEASING "/teasing_on - Enable teasing\n/teasing_off - Disable teasing\n/verify_1 - Enable verification mode with 1 check-in per day\n/verify_2 - Enable verification mode with 2 check-ins per day\n/verify_off - Disable verification mode\n"
-#define BOT_COMMANDS_UNLOCK "/unlock - Unlock key safe\n"
+#define BOT_COMMANDS_UNLOCK "/unlock - Unlock key safe\n/play4unlock - Throw dice to determine if unlocking should be possible\n"
 #define BOT_COMMANDS_ROLES "/holder - Adopt holder role\n/teaser - Adopt teaser role\n/guest - Adopt guest role\n"
 #define BOT_COMMANDS_WAITING "/waiting - Make wearer waiting to be captured by the holder\n/free - Make wearer free again (stops waiting for capture)\n"
 #define BOT_COMMANDS_CAPTURE "/capture - Capture wearer as a sub\n/release - Release wearer as a sub\n"
@@ -178,12 +179,10 @@ void Message::MessageModes(String chatId)
     msg = "Random mode is switched off.";
   SendMessage(msg, chatId);
 
-  if (session.IsVerificationMode())
+  if (verification.IsEnabled())
   {
-    msg = SYMBOL_WATCHING_EYES " Verification mode is activated. The wearer must send " + String(session.GetVerificationCountPerDay(), DEC) + 
-          " verification photos per day as requested. He has provided " + String(session.GetVerificationsToday(), DEC) + " photos today.";
-    if (session.GetVerificationCountPerDay() <= 2)
-      msg += " The next verification photo is due between " + timeFunc.Time2StringNoDays(session.GetTimeOfNextVerificationBegin()) + " and " + timeFunc.Time2StringNoDays(session.GetTimeOfNextVerificationEnd()) + ".";
+    msg = SYMBOL_WATCHING_EYES " Verification mode is activated. The wearer must send " + String(verification.GetRequiredCountPerDay(), DEC) + 
+          " verification photos per day as requested. He has provided " + String(verification.GetActualToday(), DEC) + " photos today.";
   }
   else
     msg = "Verification mode is switched off.";
@@ -296,6 +295,7 @@ void Message::ShockAction(unsigned long milliseconds, int count, String fromId, 
     {
       String msg = SYMBOL_COLLISION SYMBOL_COLLISION SYMBOL_COLLISION " Shock processing for " + String((milliseconds / 1000L), DEC) + " s begins...";
       SendMessage(msg, chatId);
+      SendMessage(msg, USER_ID_WEARER);
       session.SetTimeOfLastShock(timeFunc.GetTimeInSeconds());
       session.SetCreditFractions(session.GetCreditFractions() + (milliseconds / 1000), chatId);
       WriteCommandsAndSettings();
@@ -304,6 +304,7 @@ void Message::ShockAction(unsigned long milliseconds, int count, String fromId, 
 
       msg = "Shock processing completed. :-)";
       SendMessage(msg, chatId);
+      SendMessage(msg, USER_ID_BOT);
       WriteCommandsAndSettings();
     }
     else
@@ -497,6 +498,33 @@ void Message::UnlockAction(String fromId, String chatId, bool force)
 
 
 // ------------------------------------------------------------------------
+void Message::Play4UnlockAction(String fromId, String chatId)
+{
+  String num[10] = { SYMBOL_DIGIT0, SYMBOL_DIGIT1, SYMBOL_DIGIT2, SYMBOL_DIGIT3, SYMBOL_DIGIT4, SYMBOL_DIGIT5, SYMBOL_DIGIT6, SYMBOL_DIGIT7, SYMBOL_DIGIT8, SYMBOL_DIGIT9 };
+  Serial.println("*** Message::Play4UnlockAction()");
+  SendMessage(String(SYMBOL_DICE) + " Playing for unlock. Wearer wins for values smaller than: " + num[session.GetCredits() / 10] + num[session.GetCredits() % 10], chatId);
+  SendMessage(SYMBOL_DIGIT0 SYMBOL_DIGIT0 " " SYMBOL_DRUM, chatId);
+  delay(300);
+  int lastMessageId = GetLastSentMessageId();
+  int result = (random(10000) / 100);
+  Serial.println("- value: " + String(result, DEC));
+  int i = 0;
+  String progress = SYMBOL_DRUM;
+  while (i < result)
+  {
+    progress += ".";
+    EditMessage(num[i / 10] + num[i % 10] + " " + progress, String(lastMessageId, DEC), chatId);
+    i = i + 10;
+  }
+  EditMessage(num[result / 10] + num[result % 10], String(lastMessageId, DEC) + " " + SYMBOL_STAR_GLOWING SYMBOL_STAR_GLOWING SYMBOL_STAR_GLOWING, chatId);
+  if (result <= session.GetCredits())
+    SendMessage(SYMBOL_LOCK_OPEN " Wearer has won! " SYMBOL_SMILY_SMILE SYMBOL_SMILY_SMILE SYMBOL_SMILY_SMILE, chatId);
+  else
+    SendMessage(SYMBOL_LOCK_CLOSED " Wearer has lost! " SYMBOL_DEVIL_SMILE SYMBOL_DEVIL_SMILE SYMBOL_DEVIL_SMILE, chatId);
+}
+
+
+// ------------------------------------------------------------------------
 void Message::HolderAction(String fromId, String chatId)
 {
   User *u = users.GetUserFromId(fromId);
@@ -624,8 +652,8 @@ void Message::VerificationModeAction(String commandParameter, String fromId, Str
   String msg;
   bool wearerMayUseCommand = false;
   int minimumVerificationCount = 1;
-  if (session.IsVerificationMode())
-    minimumVerificationCount = session.GetVerificationCountPerDay() + 1;
+  if (verification.IsEnabled())
+    minimumVerificationCount = verification.GetRequiredCountPerDay() + 1;
   int verificationsPerDay = commandParameter.toInt();
   if (u->IsWearer() && (verificationsPerDay >= minimumVerificationCount))
     wearerMayUseCommand = true;
@@ -639,18 +667,18 @@ void Message::VerificationModeAction(String commandParameter, String fromId, Str
     {
       if (commandParameter == "off")
       {
-        session.SetVerificationMode(false, 0);
+        verification.SetVerificationMode(false, 0);
         SendMessage("Switching off verification mode.", chatId);
       }
       else
       {
-        if (verificationsPerDay > VERIFICATIONS_MAX)
+        if (verificationsPerDay > MAX_VERIFICATIONS)
         {
           msg += "Maximum setting of required verifications reached.";
-          verificationsPerDay = VERIFICATIONS_MAX;
+          verificationsPerDay = MAX_VERIFICATIONS;
         }
         msg += "Switching on verification mode with " + commandParameter + " photos per day. This regulation remains active until it is switched off by a privileged user.";
-        session.SetVerificationMode(true, verificationsPerDay);
+        verification.SetVerificationMode(true, verificationsPerDay);
         SendMessage(msg, chatId);
       }
       WriteCommandsAndSettings();
@@ -735,8 +763,7 @@ void Message::CheckVerificationAction(String caption, String fromId, String chat
        (caption.indexOf("verify") != -1) ||
        (caption.indexOf("proof") != -1)))
   {
-    session.CheckVerification();
-    WriteCommandsAndSettings();
+    verification.CheckIn(chatId);
   }
 }
 
@@ -887,6 +914,8 @@ void Message::ProcessNewMessages()
       }
       else if (text == "/unlock")
         UnlockAction(from_id, chat_id);
+      else if (text == "/play4unlock")
+        Play4UnlockAction(from_id, chat_id);
       else if (text == "/users")
         MessageUsers(chat_id);
       else if (text == "/roles")
@@ -959,6 +988,23 @@ void Message::SendMessageAll(String msg, String chatId)
   SendMessage(msg, chatId);
   if (chatId != GROUP_CHAT_ID)
     SendMessage(msg, GROUP_CHAT_ID);
+}
+
+
+// -------------------------------------------------
+void Message::EditMessage(String msg, String messageId, String chatId)
+{
+  Serial.print(chatId);
+  Serial.print("> ");
+  Serial.println(msg);
+  bot.editMessage(chatId, messageId, msg);
+}
+
+
+// -------------------------------------------------
+int Message::GetLastSentMessageId()
+{
+  return bot.getLastSentMessageId();
 }
 
 
@@ -1084,7 +1130,7 @@ void Message::AdoptChatDescription()
             Serial.print("- description: ");
             Serial.println(description);
             if (command.charAt(0) == '_')
-              descr += description;
+              descr += " " + description;
           }
         }
         else
@@ -1101,8 +1147,13 @@ void Message::AdoptChatDescription()
     session.SetTimeOfLastClosing(ReadParamLong(descr, LAST_CLOSING_TAG));
     session.SetTimeOfLastShock(ReadParamLong(descr, LAST_SHOCK_TAG));
     session.SetTimeOfRandomModeStart(ReadParamLong(descr, RANDOM_MODE_START_TAG));
-    session.SetTimeOfNextVerificationBegin(ReadParamLong(descr, NEXT_VERIFICATION_BEGIN_TAG));
-    session.SetTimeOfNextVerificationEnd(ReadParamLong(descr, NEXT_VERIFICATION_END_TAG));
+    for (int i = 0; i < MAX_VERIFICATIONS; i++)
+    {
+      verification.GetEvent(i)->SetTimeOfBegin(ReadParamLong(descr, NEXT_VERIFICATION_BEGIN_TAG + String(i, DEC)));
+      verification.GetEvent(i)->SetTimeOfEnd(ReadParamLong(descr, NEXT_VERIFICATION_END_TAG + String(i, DEC)));
+      if (timeFunc.GetTimeInSeconds() > verification.GetCurrentEvent()->GetTimeOfEnd())
+        verification.SetCurrentIndex(i);
+    }
 
     session.SetTeasingModeInt(ReadParamLong(descr, TEASING_MODE_TAG));
     session.SetRandomModeInt(ReadParamLong(descr, RANDOM_MODE_TAG));
@@ -1111,8 +1162,8 @@ void Message::AdoptChatDescription()
     Serial.print("- random Mode cycle: ");
     Serial.println(session.GetRandomModeShocksPerHour());
   //  session.SetRandomMode(false, 5);
-    session.SetVerificationModeInt(ReadParamLong(descr, VERIFICATION_MODE_TAG));
-    session.SetVerificationsToday((int) ReadParamLong(descr, ACTUAL_VERIFICATIONS_TAG));
+    verification.SetVerificationModeInt(ReadParamLong(descr, VERIFICATION_MODE_TAG));
+    verification.SetActualToday((int) ReadParamLong(descr, ACTUAL_VERIFICATIONS_TAG));
     session.SetCredits(ReadParamLong(descr, CREDITS_TAG));
     session.SetDeviations(ReadParamLong(descr, DEVIATIONS_TAG));
     session.SetFailures(ReadParamLong(descr, FAILURES_TAG));
@@ -1138,7 +1189,7 @@ void Message::WriteCommandsAndSettings()
   // Redundant saving...
   Serial.println("*** WriteCommandsAndSettings()");
   String info;
-  info = "864" + timeFunc.Time2StringNoDaysCompact(session.GetTimeOfNextVerificationBegin()) + timeFunc.Time2StringNoDaysCompact(session.GetTimeOfNextVerificationEnd());
+  info = "864" + timeFunc.Time2StringNoDaysCompact(verification.GetCurrentEvent()->GetTimeOfBegin()) + timeFunc.Time2StringNoDaysCompact(verification.GetCurrentEvent()->GetTimeOfEnd());
   info += " " USERS_PREFIX " ";
   info += users.GetUsersInfo();
 
@@ -1185,14 +1236,17 @@ void Message::WriteCommandsAndSettings()
               LAST_CLOSING_TAG ":" + String(session.GetTimeOfLastClosing(), DEC) + "; "
               LAST_SHOCK_TAG ":" + String(session.GetTimeOfLastShock(), DEC) + "; "
               RANDOM_MODE_START_TAG ":" + String(session.GetTimeOfRandomModeStart(), DEC) + "; "
-              NEXT_VERIFICATION_BEGIN_TAG ":" + String(session.GetTimeOfNextVerificationBegin(), DEC) + "; "
-              NEXT_VERIFICATION_END_TAG ":" + String(session.GetTimeOfNextVerificationEnd(), DEC) + "; "
               "\"},";
+  commands += "{\"command\":\"_verification\",\"description\":\"";
+  for (int i = 0; i < MAX_VERIFICATIONS; i++)
+    commands += NEXT_VERIFICATION_BEGIN_TAG + String(i, DEC) + ":" + String(verification.GetEvent(i)->GetTimeOfBegin(), DEC) + "; " +
+                NEXT_VERIFICATION_END_TAG + String(i, DEC) + ":" + String(verification.GetEvent(i)->GetTimeOfEnd(), DEC) + "; ";
+  commands += "\"},";
   commands += "{\"command\":\"_settingmodes\",\"description\":\""
               TEASING_MODE_TAG ":" + String(session.GetTeasingModeInt(), DEC) + "; "
               RANDOM_MODE_TAG ":" + String(session.GetRandomModeInt(), DEC) + "; "
-              VERIFICATION_MODE_TAG ":" + String(session.GetVerificationModeInt(), DEC) + "; "
-              ACTUAL_VERIFICATIONS_TAG ":" + String(session.GetVerificationsToday(), DEC) + "; "
+              VERIFICATION_MODE_TAG ":" + String(verification.GetVerificationModeInt(), DEC) + "; "
+              ACTUAL_VERIFICATIONS_TAG ":" + String(verification.GetActualToday(), DEC) + "; "
               CREDITS_TAG ":" + String(session.GetCredits(), DEC) + "; "
               DEVIATIONS_TAG ":" + String(session.GetDeviations(), DEC) + "; "
               FAILURES_TAG ":" + String(session.GetFailures(), DEC) + "; "

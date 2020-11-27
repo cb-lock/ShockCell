@@ -8,6 +8,8 @@
 
 
 
+#define USER_CACHE_SIZE 30
+
 #define KEEP_TIMESTAMP false
 #define UPDATE_TIMESTAMP true
 

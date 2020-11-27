@@ -2,12 +2,111 @@
 
 #define __Session_h__
 
-#include "Arduino.h"
+#define MAX_VERIFICATIONS 5
+#define VERIFICATION_STATUS_BEFORE 0
+#define VERIFICATION_STATUS_WAITING 1
+#define VERIFICATION_STATUS_RECEIVED 2
+#define DURATION_EARLY_VERIFICATION 3*3600L
+#define DURATION_LATE_VERIFICATION 4*3600L
+#define DURATION_RANDOM_VERIFICATION 900
+#define VERIFICATION_BONUS_TIME 60
 
+#define SHOCKS_PER_SESSION 50
+#define SHOCK_BACKFILL_PROBABILITY 100
+#define SHOCK_NEEDINESS_THRESHOLD 60.0
+#define SHOCK_COUNT_MAXMIMUM 30
+#define SHOCK_DURATION_MINIMUM 1000
+#define SHOCK_DURATION_DEFAULT 2000
+#define SHOCK_DURATION_MAXIMUM 20000
+#define SHOCK_BREAK_DURATION 2000
+
+
+#include "Arduino.h"
 #include "Defs.h"
 #include "TimeF.h"
 #include "EServer.h"
 #include "User.h"
+
+
+
+class VerificationEvent
+{
+private:
+  int index = 0;
+  unsigned long timeOfBegin = 0;
+  unsigned long timeOfEnd = 0;
+  bool isRandom = false;
+  bool needsCode = false;
+  String code;
+  bool announcedBegin = false;
+  bool announcedEnd = false;
+  bool fulfilled = false;
+
+public:
+  VerificationEvent() {}
+  int GetIndex() { return index; }
+  void SetIndex(int i) { index = i; }
+  bool IsRandom() { return isRandom; }
+  void SetRandom(bool a) { isRandom = a; }
+  bool NeedsCode() { return needsCode; }
+  void SetNeedsCode(bool c) { needsCode = c; }
+  String GetCode() { return code; }
+  void SetCode(String c) { code = c; }
+  bool IsAnnouncedBegin() { return announcedBegin; }
+  void SetAnnouncedBegin(bool a) { announcedBegin = a; }
+  bool IsAnnouncedEnd() { return announcedEnd; }
+  void SetAnnouncedEnd(bool a) { announcedEnd = a; }
+  bool IsFulfilled() { return fulfilled; }
+  void SetFulfilled(bool f) { fulfilled = f; }
+  unsigned long GetTimeOfBegin() { return timeOfBegin; }
+  void SetTimeOfBegin(unsigned long theTime) { timeOfBegin = theTime; }
+  unsigned long GetTimeOfEnd() { return timeOfEnd; }
+  void SetTimeOfEnd(unsigned long theTime) { timeOfEnd = theTime; }
+  void Reset() { timeOfBegin = 0; timeOfEnd = 0; isRandom = false; needsCode = false; announcedBegin = false; announcedEnd = false; fulfilled = false; }
+};
+
+
+class Verification
+{
+private:
+  VerificationEvent event[MAX_VERIFICATIONS];
+  bool enabled = true;
+  bool dayIsCompleted = false;
+  int requiredCountPerDay = 0;
+  int currentIndex = 0;
+  int dayOfWeek = 0;
+
+public:
+  void Init();
+  bool IsEnabled() { return enabled; }
+  void SetEnabled(bool e) { enabled = e; }
+  void SetVerificationMode(bool onOff, int count=1);
+  // only for settings exchange:
+  void SetVerificationModeInt(int mode) { enabled = (mode > 0); requiredCountPerDay = mode; }
+  int GetVerificationModeInt() { return enabled ? requiredCountPerDay : 0; }
+  int GetRequiredCountPerDay() { return requiredCountPerDay; }
+  void SetActualToday(int a);
+  int GetActualToday();
+  bool IsDayCompleted() { return dayIsCompleted; }
+  void SetDayCompleted(bool i) { dayIsCompleted = i; }
+  //
+  int GetCurrentIndex() { return currentIndex; }
+  void SetCurrentIndex(int c) { currentIndex = c; }
+  int GetDayOfWeek() { return dayOfWeek; }
+  void SetDayOfWeek(int d) { dayOfWeek = d; }
+  //
+  VerificationEvent * GetEvent(int i) { if (i < MAX_VERIFICATIONS) return &event[i]; else return NULL; }
+  VerificationEvent * GetCurrentEvent() { if (currentIndex < MAX_VERIFICATIONS) return &event[currentIndex]; else return NULL; }
+  unsigned long GetTimeOfNextBegin() { return event[currentIndex].GetTimeOfBegin(); }
+  unsigned long GetTimeOfNextEnd() { return event[currentIndex].GetTimeOfBegin(); }
+
+  void Reset() { currentIndex = 0; dayIsCompleted = false; for (int i = 0; i < MAX_VERIFICATIONS; i++) event[i].Reset(); }
+  void WindowCompleted();
+  void Schedule();
+  void CheckIn(String chatId);
+  void ProcessVerification(String chatId);
+};
+
 
 
 class Session
@@ -20,10 +119,6 @@ private:
   bool ramdomShockOffMessage30 = false;
   bool ramdomShockOffMessage10 = false;
   unsigned long randomShocksPerHour = 1;
-  bool verificationMode = true;
-  int verificationsPerDay = 0;
-  int verificationStatus = VERIFICATION_STATUS_BEFORE;
-  int actualVerificationsToday = 0;
   bool teasingMode = true;
   int credits = 0;
   int creditFractions = 0;
@@ -43,11 +138,8 @@ private:
   unsigned long timeOfNextScheduledShock = 0;
   unsigned long timeOfRandomModeStart = 0;
   unsigned long timeOfLast5sInterval = 0;
+  unsigned long timeOfLast1minInterval = 0;
   unsigned long timeOfLast5minInterval = 0;
-  unsigned long timeOfNextVerificationBegin = 0;
-  unsigned long timeOfNextVerificationEnd = 0;
-//  String lastShockOwner;
-//  String lastShockReason;
 
 public:
   Session() {}
@@ -88,6 +180,8 @@ public:
 
   void SetTimeOfLast5sInterval(unsigned long setTime) { timeOfLast5sInterval = setTime; }
   unsigned long GetTimeOfLast5sInterval() { return timeOfLast5sInterval; }
+  void SetTimeOfLast1minInterval(unsigned long setTime) { timeOfLast1minInterval = setTime; }
+  unsigned long GetTimeOfLast1minInterval() { return timeOfLast1minInterval; }
   void SetTimeOfLast5minInterval(unsigned long setTime) { timeOfLast5minInterval = setTime; }
   unsigned long GetTimeOfLast5minInterval() { return timeOfLast5minInterval; }
 
@@ -108,19 +202,6 @@ public:
   int GetRandomModeShocksPerHour() { return randomShocksPerHour; }
   void SetRandomModeInt(int mode) { randomShockMode = (mode > 0); randomShocksPerHour = mode; }
   int GetRandomModeInt() { return randomShockMode ? randomShocksPerHour : 0; }
-
-  int SetVerificationMode(bool onOff, int count=1);
-  bool IsVerificationMode() { return verificationMode; }
-  int GetVerificationCountPerDay() { return verificationsPerDay; }
-  void SetVerificationModeInt(int mode) { verificationMode = (mode > 0); verificationsPerDay = mode; }
-  int GetVerificationModeInt() { return verificationMode ? verificationsPerDay : 0; }
-  void SetVerificationsToday(int count) { actualVerificationsToday = count; }
-  int GetVerificationsToday() { return actualVerificationsToday; }
-  void ProcessVerification();
-  unsigned long GetTimeOfNextVerificationBegin() { return timeOfNextVerificationBegin; }
-  void SetTimeOfNextVerificationBegin(unsigned long theTime) { timeOfNextVerificationBegin = theTime; }
-  unsigned long GetTimeOfNextVerificationEnd() { return timeOfNextVerificationEnd; }
-  void SetTimeOfNextVerificationEnd(unsigned long theTime) { timeOfNextVerificationEnd = theTime; }
 
   void SetCredits(int newVal) { credits = newVal; }
   void SetCredits(int newVal, String chatId);
@@ -147,8 +228,6 @@ public:
 
   void ProcessRandomShocks();
   void ScheduleNextRandomShock();
-  void CheckVerification();
-  void ScheduleNextVerification();
 };
 
 #endif
