@@ -31,7 +31,7 @@ UniversalTelegramBot bot(BOT_TOKEN, clientsec);
 
 // Checks for new messages every 1 second.
 
-#define BOT_COMMANDS_GENERAL "/start - Start communication\n/state - Report the cover state\n/roles - List roles\n/users - List users in chat\n"
+#define BOT_COMMANDS_GENERAL "/start - Start communication\n/state - Report the cover state\n/roles - List roles\n/users - List users in chat\n/play_6 - Throw dice (any number of possibilities with corresponding number)\n"
 #define BOT_COMMANDS_SHOCKS "/shock_1 - Shock for 1 second (other intervals work with corresponding numbers)\n/shock_5 - Shock for 5 seconds (other intervals work with corresponding numbers)\n/shock_10 - Shock for 10 seconds (other intervals work with corresponding numbers)\n/shock_30 - Shock for 30 seconds (other intervals work with corresponding numbers)\n"
 #define BOT_COMMANDS_RANDOM "/random_5 - Switch on random shock mode with 5 shocks per hour (other intervals work with corresponding numbers)\n/random_off - Switch off random shock mode\n"
 #define BOT_COMMANDS_TEASING "/teasing_on - Enable teasing\n/teasing_off - Disable teasing\n/verify_1 - Enable verification mode with 1 check-in per day\n/verify_2 - Enable verification mode with 2 check-ins per day\n/verify_off - Disable verification mode\n"
@@ -498,15 +498,49 @@ void Message::UnlockAction(String fromId, String chatId, bool force)
 
 
 // ------------------------------------------------------------------------
+void Message::PlayAction(String max, String fromId, String chatId)
+{
+  int maxCount = max.toInt();
+  if (maxCount > 100)
+    maxCount = 100;
+  else if (maxCount < 2)
+    maxCount = 2;
+  String num[10] = { SYMBOL_DIGIT0, SYMBOL_DIGIT1, SYMBOL_DIGIT2, SYMBOL_DIGIT3, SYMBOL_DIGIT4, SYMBOL_DIGIT5, SYMBOL_DIGIT6, SYMBOL_DIGIT7, SYMBOL_DIGIT8, SYMBOL_DIGIT9 };
+  Serial.println("*** Message::PlayAction()");
+  SendMessage(String(SYMBOL_DICE) + " Playing with dice (1.." + String(maxCount, DEC) + ").", chatId);
+  SendMessage(SYMBOL_DIGIT0 SYMBOL_DIGIT0 " " SYMBOL_DRUM, chatId);
+  delay(300);
+  int lastMessageId = GetLastSentMessageId();
+  int result = (random(90000) * maxCount / 90000) + 1;
+  Serial.println("- value: " + String(result, DEC));
+  int i = 0;
+  String progress = SYMBOL_DRUM;
+  while (i <= result)
+  {
+    progress += ".";
+    EditMessage(num[i / 10] + num[i % 10] + " " + progress, String(lastMessageId, DEC), chatId);
+    if (maxCount < 10)
+      i++;
+    else
+      i = i + maxCount/10;
+  }
+  EditMessage(num[result / 10] + num[result % 10] + " " + SYMBOL_STAR_GLOWING, String(lastMessageId, DEC), chatId);
+}
+
+
+// ------------------------------------------------------------------------
 void Message::Play4UnlockAction(String fromId, String chatId)
 {
   String num[10] = { SYMBOL_DIGIT0, SYMBOL_DIGIT1, SYMBOL_DIGIT2, SYMBOL_DIGIT3, SYMBOL_DIGIT4, SYMBOL_DIGIT5, SYMBOL_DIGIT6, SYMBOL_DIGIT7, SYMBOL_DIGIT8, SYMBOL_DIGIT9 };
   Serial.println("*** Message::Play4UnlockAction()");
-  SendMessage(String(SYMBOL_DICE) + " Playing for unlock. Wearer wins for values smaller than: " + num[session.GetCredits() / 10] + num[session.GetCredits() % 10], chatId);
+  unsigned long duration = timeFunc.GetTimeInSeconds() - session.GetTimeOfLastClosing();
+  int winPoints = session.GetCredits() + timeFunc.GetNumberOfDays(duration);
+  SendMessage(String(SYMBOL_DICE) + " Playing for unlock. Wearer wins for values smaller than: " + num[winPoints / 10] + num[winPoints % 10] +
+              " (" + timeFunc.GetNumberOfDays(duration) + " days locked + " + session.GetCredits() + " credits)", chatId);
   SendMessage(SYMBOL_DIGIT0 SYMBOL_DIGIT0 " " SYMBOL_DRUM, chatId);
   delay(300);
   int lastMessageId = GetLastSentMessageId();
-  int result = (random(10000) / 100);
+  int result = (random(90000) / 900);
   Serial.println("- value: " + String(result, DEC));
   int i = 0;
   String progress = SYMBOL_DRUM;
@@ -514,10 +548,10 @@ void Message::Play4UnlockAction(String fromId, String chatId)
   {
     progress += ".";
     EditMessage(num[i / 10] + num[i % 10] + " " + progress, String(lastMessageId, DEC), chatId);
-    i = i + 10;
+    i = i + 5;
   }
-  EditMessage(num[result / 10] + num[result % 10], String(lastMessageId, DEC) + " " + SYMBOL_STAR_GLOWING SYMBOL_STAR_GLOWING SYMBOL_STAR_GLOWING, chatId);
-  if (result <= session.GetCredits())
+  EditMessage(num[result / 10] + num[result % 10] + " " + SYMBOL_STAR_GLOWING, String(lastMessageId, DEC), chatId);
+  if (result <= winPoints)
     SendMessage(SYMBOL_LOCK_OPEN " Wearer has won! " SYMBOL_SMILY_SMILE SYMBOL_SMILY_SMILE SYMBOL_SMILY_SMILE, chatId);
   else
     SendMessage(SYMBOL_LOCK_CLOSED " Wearer has lost! " SYMBOL_DEVIL_SMILE SYMBOL_DEVIL_SMILE SYMBOL_DEVIL_SMILE, chatId);
@@ -916,6 +950,8 @@ void Message::ProcessNewMessages()
         UnlockAction(from_id, chat_id);
       else if (text == "/play4unlock")
         Play4UnlockAction(from_id, chat_id);
+      else if (text.substring(0, 5) == "/play")
+        PlayAction(text.substring(6), from_id, chat_id);
       else if (text == "/users")
         MessageUsers(chat_id);
       else if (text == "/roles")
@@ -954,10 +990,6 @@ void Message::ProcessNewMessages()
         WriteCommandsAndSettings();
       else if (text == "/restartshockcell")
         RestartRequest(from_id, chat_id);
-      else if (text == "/test")
-        SendMessage(SYMBOL_LOCK_CLOSED SYMBOL_LOCK_OPEN SYMBOL_LOCK_KEY SYMBOL_KEY SYMBOL_MOON SYMBOL_SUN SYMBOL_WATCHING_EYES SYMBOL_POLICEMAN SYMBOL_QUEEN SYMBOL_DEVIL_SMILE
-                    SYMBOL_DEVIL_ANGRY SYMBOL_BELL SYMBOL_TWO_CHAIN_LINKS SYMBOL_CLOCK_3 SYMBOL_SMILY_SMILE SYMBOL_SMILY_WINK SYMBOL_SMILE_OHOH SYMBOL_FORBIDDEN SYMBOL_CUSTOMS
-                    SYMBOL_STOP SYMBOL_OK SYMBOL_EYE SYMBOL_SUN SYMBOL_NO_ENTRY SYMBOL_CHAINS, chat_id);
       else if (text.substring(0, 1) == "/")
         UnknownCommand(chat_id);
       else if (hasPhoto)

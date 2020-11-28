@@ -16,6 +16,7 @@ public:
   int GetMinutes();
   unsigned long GetMidnightToday();
   int GetDayOfWeek() { return (((GetTimeInSeconds() / 86400L) + 3) % 7); }
+  int GetNumberOfDays(unsigned long duration) { return (duration / 86400); }
   bool IsWeekend();
   bool IsSleepingTime();
   unsigned long WakeUpTime();
