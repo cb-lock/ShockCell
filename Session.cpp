@@ -13,6 +13,482 @@ extern TimeFunctions timeFunc;
 extern UserSet users;
 extern Message message;
 extern OledDisplay oledDisplay;
+extern Session session;
+extern Verification verification;
+extern Task tasks;
+
+
+
+// ------------------------------------------------------------------------
+String Task::GetStatusMessage()
+{
+  String statusStr;
+  if (IsActive() && (! IsFulfilled()))
+  {
+    // active task
+    if (timeFunc.GetTimeInSeconds() > GetTimeOfBegin())
+    {
+      // task is due
+      if (timeFunc.GetTimeInSeconds() < GetTimeOfEnd())
+      {
+        // task is due
+        statusStr = "due task";
+      }
+      else
+      {
+        // task is overdue
+        statusStr = "overdue";
+      }
+    }
+    else
+    {
+      // pending task
+      statusStr = "pending";
+    }
+    return "[" + String(GetIndex(), DEC) + "]  " + GetMessage() + " (" + statusStr + ")\n";
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Task::Print()
+{
+  switch (tType)
+  {
+    default:
+    case TASK_GENERAL:
+      Serial.print("Task");
+      break;
+    case TASK_CONFIRMATION:
+      Serial.print("Confirmation");
+      break;
+  }
+  Serial.print(" index: " + String(GetIndex(), DEC));
+  Serial.println("- message: " + GetMessage());
+  if (IsActive())
+    Serial.print(" - is active, ");
+  else
+    Serial.print(" - is not active, ");
+  if (IsFulfilled())
+    Serial.println("is fulfilled, ");
+  else
+    Serial.println("is not fulfilled, ");
+  Serial.print("- begin: " + timeFunc.Time2StringNoDays(GetTimeOfBegin()));
+  if (IsAnnouncedBegin())
+    Serial.println(" (notified)");
+  else
+    Serial.println(" (not notified)");
+  Serial.print("- end: " + timeFunc.Time2StringNoDays(GetTimeOfEnd()));
+  if (IsAnnouncedEnd())
+    Serial.println(" (notified)");
+  else
+    Serial.println(" (not notified)");
+}
+
+
+// ------------------------------------------------------------------------
+void Tasklist::Init()
+{
+  Serial.println("*** Tasklist::Init()");
+  for (int i = 0; i < MAX_TASKS; i++)
+  {
+    task[i].SetIndex(i);
+    task[i].Reset();
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Tasklist::Reset()
+{
+  Serial.println("*** Tasklist::Reset()");
+  for (int i = 0; i < MAX_TASKS; i++)
+  {
+    Serial.println("- index: " + String(i, DEC));
+    task[i].Reset();
+    task[i].SetAnnouncedBegin(false);
+    if (task[i].IsAnnouncedBegin())
+      Serial.println("- notification begin: true");
+    else
+      Serial.println("- notification begin: false");
+    if (task[i].IsAnnouncedEnd())
+      Serial.println("- notification end: true");
+    else
+      Serial.println("- notification end: false");
+  }
+}
+
+
+// ------------------------------------------------------------------------
+int Tasklist::FindFreeIndex()
+{
+  int i = 0;
+  while (i < MAX_TASKS)
+  {
+    if (! task[i].IsActive())
+      return i;
+    i++;
+  }
+  return TASK_NONE;
+}
+
+
+// ------------------------------------------------------------------------
+int Tasklist::Add(String msg, int tType, unsigned long tBegin, unsigned long tEnd)
+{
+  
+}
+
+
+// ------------------------------------------------------------------------
+const String Tasklist::GetTaskList()
+{
+  String str = "List of open tasks:\n";
+  Serial.println("*** Tasklist::MessageTasks()");
+  for (int i = 0; i < MAX_TASKS; i++)
+  {
+    Serial.println("- index:" + String(i, DEC));
+    str += task[i].GetStatusMessage();
+  }
+  Print();
+
+  return str;
+}
+
+
+// ------------------------------------------------------------------------
+void Tasklist::Print()
+{
+  Serial.println("*** Tasklist::Print()");
+  Serial.println("- active tasks: " + String(GetActiveTaskCount(), DEC));
+  for (int i = 0; i < MAX_TASKS; i++)
+  {
+    task[i].Print();
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void VerificationEvent::Activate(unsigned long windowStart, unsigned long windowEnd)
+{
+  SetRandom(true);
+  SetNeedsCode(true);
+  SetRandomCode();
+  SetTimeOfBegin(windowStart);
+  SetTimeOfEnd(windowEnd);
+  Print();
+}
+
+
+// ------------------------------------------------------------------------
+void VerificationEvent::Print()
+{
+  Serial.print("Verification event index: " + String(GetIndex(), DEC));
+  if (IsFulfilled())
+    Serial.print(" - is fulfilled, ");
+  else
+    Serial.print(" - is not fulfilled, ");
+  if (IsRandom())
+    Serial.println("random");
+  else
+    Serial.println("not random");
+  Serial.print("- begin: " + timeFunc.Time2StringNoDays(GetTimeOfBegin()));
+  if (IsAnnouncedBegin())
+    Serial.println(" (notified)");
+  else
+    Serial.println(" (not notified)");
+  Serial.print("- end: " + timeFunc.Time2StringNoDays(GetTimeOfEnd()));
+  if (IsAnnouncedEnd())
+    Serial.println(" (notified)");
+  else
+    Serial.println(" (not notified)");
+  Serial.print("- code: " + GetCode());
+  if (NeedsCode())
+    Serial.println(" (needed)");
+  else
+    Serial.println(" (not needed)");
+}
+
+
+// ------------------------------------------------------------------------
+void Verification::Init()
+{
+  Serial.println("*** Verification::Init()");
+  for (int i = 0; i < MAX_VERIFICATIONS; i++)
+  {
+    event[i].SetIndex(i);
+    event[i].Reset();
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Verification::Reset()
+{
+  Serial.println("*** Verification::Reset()");
+  currentIndex = 0;
+  dayIsCompleted = false;
+  String vCode;
+  for (int i = 0; i < MAX_VERIFICATIONS; i++)
+  {
+    Serial.println("- index: " + String(i, DEC));
+    event[i].Reset();
+    event[i].SetAnnouncedBegin(false);
+    if (event[i].IsAnnouncedBegin())
+      Serial.println("- notification begin: true");
+    else
+      Serial.println("- notification begin: false");
+    if (event[i].IsAnnouncedEnd())
+      Serial.println("- notification end: true");
+    else
+      Serial.println("- notification end: false");
+    event[i].SetRandomCode();
+    Serial.println("- code: " + event[i].GetCode());
+  }
+}
+
+
+// ------------------------------------------------------------------------
+String Verification::GetHash()
+{
+  return String("864") + GetCurrentEvent()->GetCode() + timeFunc.Time2StringNoDaysCompact(GetCurrentEvent()->GetTimeOfBegin()) + timeFunc.Time2StringNoDaysCompact(GetCurrentEvent()->GetTimeOfEnd());
+}
+
+
+// ------------------------------------------------------------------------
+void Verification::Print()
+{
+  Serial.println("*** Verification::Print()");
+  if (IsEnabled())
+    Serial.println("- is enabled");
+  else
+    Serial.println("- is disabled");
+  if (IsDayCompleted())
+    Serial.println("- day is completed");
+  else
+    Serial.println("- day is not completed");
+  Serial.println("- current index: " + String(GetCurrentIndex(), DEC));
+  Serial.println("- required count per day: " + String(GetRequiredCountPerDay(), DEC));
+  Serial.println("- actual count per day: " + String(GetActualToday(), DEC));
+  Serial.println("- day of week: " + String(GetDayOfWeek(), DEC));
+  for (int i = 0; i < MAX_VERIFICATIONS; i++)
+    event[i].Print();
+}
+
+
+// ------------------------------------------------------------------------
+int Verification::GetActualToday()
+{
+  int c = 0;
+  int i = 0;
+  while (i < requiredCountPerDay)
+  {
+    if (event[i].IsFulfilled())
+      c++;
+    i++;
+  }
+  return c;
+}
+
+
+// ------------------------------------------------------------------------
+void Verification::SetActualToday(int a)
+{
+  for (int i = 0; i < a; i++)
+  {
+    event[i].SetFulfilled(true);
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Verification::WindowCompleted()
+{
+  Serial.println("*** Verification::WindowCompleted()");
+  Serial.println("- verification window: " + String(GetCurrentEvent()->GetIndex(), DEC));
+  GetCurrentEvent()->SetAnnouncedBegin(true);
+  GetCurrentEvent()->SetAnnouncedEnd(true);
+  if (GetCurrentIndex() < GetRequiredCountPerDay())
+  {
+    SetCurrentIndex(GetCurrentIndex() + 1);
+  }
+  else
+  {
+    SetDayCompleted(true);
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Verification::SetVerificationMode(bool onOff, int count)
+{
+  Serial.println("*** Verification::SetVerificationMode()");
+  Serial.print("- onOff: ");
+  Serial.println(onOff);
+  Serial.print("- count: ");
+  Serial.println(count);
+  SetEnabled(onOff);
+  requiredCountPerDay = count;
+  Schedule(true);
+  message.WriteCommandsAndSettings();
+}
+
+
+// ------------------------------------------------------------------------
+void Verification::Schedule(bool force)
+{
+  Serial.println("*** Verification::Schedule()");
+  Serial.println("- verifications per day: " + String(GetRequiredCountPerDay(), DEC));
+  unsigned long wakeUpTime = timeFunc.WakeUpTime();
+  unsigned long sleepTime = timeFunc.SleepTime();
+  unsigned long verificationWindow = 0;
+  unsigned long windowBeginTime = 0;  // used to determine intermediate values when defining windows
+
+  if (IsEnabled())
+  {
+    Serial.println("- IsEnabled");
+    // schedule new verification events if there is a new day
+    if (force || (timeFunc.GetDayOfWeek() != GetDayOfWeek()))
+    {
+      Serial.println("");
+      // new day --> update day of week
+      SetDayOfWeek(timeFunc.GetDayOfWeek());
+      // reset all fulfillments first
+      Reset();
+      // check for the number of verifications
+      switch (GetRequiredCountPerDay())
+      {
+      case 1:
+        Serial.println("1:");
+	      event[0].Activate(wakeUpTime, sleepTime);
+        break;
+      case 2:
+        Serial.println("2:");
+      	event[0].Activate(wakeUpTime, wakeUpTime + DURATION_EARLY_VERIFICATION);
+      	event[1].Activate(sleepTime - DURATION_LATE_VERIFICATION, sleepTime);
+        break;
+      case 3:
+        Serial.println("3:");
+	      event[0].Activate(wakeUpTime, wakeUpTime + DURATION_EARLY_VERIFICATION);
+	      verificationWindow = (sleepTime - DURATION_LATE_VERIFICATION) - (wakeUpTime + DURATION_EARLY_VERIFICATION) - 3600;
+	      windowBeginTime = (wakeUpTime + DURATION_EARLY_VERIFICATION + random(verificationWindow*100) / 100) + 1800;
+	      event[1].Activate(windowBeginTime, windowBeginTime + DURATION_RANDOM_VERIFICATION);
+	      event[2].Activate(sleepTime - DURATION_LATE_VERIFICATION, sleepTime);
+        break;
+      case 4:
+        Serial.println("4:");
+	      event[0].Activate(wakeUpTime, wakeUpTime + DURATION_EARLY_VERIFICATION);
+        verificationWindow = ((sleepTime - DURATION_LATE_VERIFICATION) - (wakeUpTime + DURATION_EARLY_VERIFICATION)) / 2 - 1800;
+	      windowBeginTime = (wakeUpTime + DURATION_EARLY_VERIFICATION + random(verificationWindow*100) / 100) + 900;
+	      event[1].Activate(windowBeginTime, windowBeginTime + DURATION_RANDOM_VERIFICATION);
+	      windowBeginTime = (event[1].GetTimeOfEnd() + random(verificationWindow*100) / 100) + 900;
+	      event[2].Activate(windowBeginTime, windowBeginTime + DURATION_RANDOM_VERIFICATION);
+	      event[3].Activate(sleepTime - DURATION_LATE_VERIFICATION, sleepTime);
+        break;
+      case 0:
+      default:
+        Serial.println("0:");
+        break;
+      }
+      message.WriteCommandsAndSettings();
+      Print();
+    }
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Verification::CheckIn(String chatId)
+{
+  Serial.println("*** CheckVerification()");
+  Print();
+  if (IsEnabled())
+  {
+    Serial.println("- verification mode: true");
+    if (timeFunc.GetTimeInSeconds() > GetTimeOfNextBegin())
+    {
+      // 60 seconds bonus time on check
+      if (timeFunc.GetTimeInSeconds() < GetTimeOfNextEnd() + VERIFICATION_BONUS_TIME)
+      {
+        // verification is accepted, it comes in time
+        GetCurrentEvent()->SetFulfilled(true);
+        message.SendMessage("Verification accepted " + timeFunc.Time2String(GetTimeOfNextEnd() - timeFunc.GetTimeInSeconds() + VERIFICATION_BONUS_TIME) + " before the deadline.", chatId);
+        WindowCompleted();
+        Serial.print("- actual verifications after check-in: ");
+        Serial.println(GetActualToday());
+      }
+      else
+      {
+        // verification is late
+        session.SetDeviations(session.GetDeviations() + 1);
+        message.SendMessage(SYMBOL_DEVIL_ANGRY " Verification is not acceptable. It comes late.", chatId);
+      }
+    }
+    else
+    {
+      // verification comes early
+      session.SetDeviations(session.GetDeviations() + 1);
+      message.SendMessage(SYMBOL_DEVIL_SMILE " Verification is not acceptable. It comes early.", chatId);
+    }
+    message.WriteCommandsAndSettings();
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Verification::ProcessVerification(String chatId)
+{
+  Serial.println("*** Session::ProcessVerification()");
+  Print();
+  if (IsEnabled() && session.IsActiveSession() && (! IsDayCompleted()))
+  {
+    // verification is enabled today
+    Serial.println("- (IsEnabled() && session.IsActiveSession() && (! IsDayCompleted()))");
+    if (GetCurrentEvent()->IsFulfilled())
+    {
+      Serial.println("- (GetCurrentEvent()->IsFulfilled())");
+      WindowCompleted();
+    }
+    else if (timeFunc.GetTimeInSeconds() > GetTimeOfNextEnd())
+    {
+      // the end of the current period has arrived
+      Serial.println("- (timeFunc.GetTimeInSeconds() > GetTimeOfNextEnd())");
+      if (! GetCurrentEvent()->IsAnnouncedEnd())
+      {
+        Serial.println("- (! GetCurrentEvent()->IsAnnouncedEnd())");
+        // check, if we are just starting and already beyond the verification window
+        if (! GetCurrentEvent()->IsAnnouncedBegin())
+        {
+          Serial.println("- verification window " + String(GetCurrentEvent()->GetIndex(), DEC) + " is skipped");
+          WindowCompleted();
+        }
+        else
+        {
+          Serial.println("- verification window " + String(GetCurrentEvent()->GetIndex(), DEC) + " ends");
+          // angry smiling symbols
+          session.SetFailures(session.GetFailures() + 1);
+          message.SendMessage(SYMBOL_DEVIL_ANGRY SYMBOL_DEVIL_ANGRY SYMBOL_DEVIL_ANGRY " Verification request has expired!!! Wearer " + users.GetWearer()->GetName() + " has failed to provide a verification in time!", chatId);
+          WindowCompleted();
+          message.WriteCommandsAndSettings();
+        }
+      }
+    }
+    else if (timeFunc.GetTimeInSeconds() > GetTimeOfNextBegin())
+    {
+      Serial.println("- (timeFunc.GetTimeInSeconds() > GetTimeOfNextBegin())");
+      if (! GetCurrentEvent()->IsAnnouncedBegin())
+      {
+        Serial.println("- verification window " + String(GetCurrentEvent()->GetIndex(), DEC) + " begins");
+        // devil smiling symbol
+        message.SendMessage(SYMBOL_DEVIL_SMILE " Verification request - wearer " + users.GetWearer()->GetName() + " must provide a verification showing the verification code " + GetCurrentEvent()->GetCode() + " within " + 
+                            timeFunc.Time2String(GetTimeOfNextEnd() - timeFunc.GetTimeInSeconds()) + " from now!", chatId);
+        GetCurrentEvent()->SetAnnouncedBegin(true);
+        message.WriteCommandsAndSettings();
+      }
+    }
+  }
+}
+
 
 
 // ------------------------------------------------------------------------
@@ -140,6 +616,55 @@ unsigned long Session::GetRemainingTime(bool forDisplay)
 }
 
 
+// ------------------------------------------------------------------------
+void Session::SetCredits(int newVal, String chatId)
+{
+  int creditCount = GetCredits();
+  SetCredits(newVal);
+  if (GetCredits() > creditCount)
+    message.SendMessage(String(SYMBOL_CREDIT) + " Wearer received " + (GetCredits() > creditCount) + " credits.", chatId);
+}
+
+
+// ------------------------------------------------------------------------
+void Session::SetCreditFractions(int newVal)
+{
+  creditFractions = newVal;
+  if (creditFractions >= 10)
+  {
+    int newCredits = creditFractions / 10;
+    creditFractions = creditFractions % 10;
+    SetCredits(GetCredits() + newCredits);
+  }
+}
+
+
+// ------------------------------------------------------------------------
+void Session::SetCreditFractions(int newVal, String chatId)
+{
+  int creditCount = GetCredits();
+  SetCreditFractions(newVal);
+  if (GetCredits() > creditCount)
+    message.SendMessage(String(SYMBOL_CREDIT) + " Wearer received " + (GetCredits() > creditCount) + " credits.", chatId);
+}
+
+
+// ------------------------------------------------------------------------
+void Session::SetVouchers(int newVal, String chatId)
+{
+  int voucherCount = GetVouchers();
+  SetVouchers(newVal);
+  if (GetVouchers() > voucherCount)
+    message.SendMessage(String(SYMBOL_VOUCHER) + " Wearer received " + (GetVouchers() > voucherCount) + " unlock vouchers.", chatId);
+}
+
+
+// ------------------------------------------------------------------------
+bool Session::IsActiveSession()
+{
+  return (! users.GetWearer()->IsFreeWearer()) || activeChastikeySession;
+}
+
 
 // ------------------------------------------------------------------------
 void Session::InfoChastikey()
@@ -147,7 +672,7 @@ void Session::InfoChastikey()
   String payload;
 
   Serial.print("*** Session::InfoChastikey()");
-
+/*
   int trial = 0;
   bool success = false;
   while ((trial < 10) && ! success)
@@ -199,6 +724,7 @@ void Session::InfoChastikey()
   }
   Serial.print("- Chastikey session: ");
   Serial.println(IsActiveChastikeySession());
+  */
 }
 
 
@@ -239,40 +765,6 @@ void Session::Punishment(int level)
     case 9:
       Shock(10, 10000);
       break;
-  }
-}
-
-
-// ------------------------------------------------------------------------
-int Session::SetVerificationMode(bool onOff, int count)
-{
-  Serial.println("*** Session::SetVerificationMode()");
-  Serial.print("- onOff: ");
-  Serial.println(onOff);
-  Serial.print("- count: ");
-  Serial.println(count);
-
-  verificationMode = onOff;
-  verificationsPerDay = count;
-  message.WriteCommandsAndSettings();
-}
-
-
-// ------------------------------------------------------------------------
-void Session::ProcessVerification()
-{
-  Serial.println("*** Session::ProcessVerification()");
-  Serial.print("- verificationMode: ");
-  Serial.println(verificationMode);
-  if (verificationMode)
-  {
-    // honor need for sleep
-    Serial.print("- IsSleeping: ");
-    Serial.println(users.GetWearer()->IsSleeping());
-
-    if (! users.GetWearer()->IsSleeping())
-    {
-    }
   }
 }
 

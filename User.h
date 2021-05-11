@@ -8,6 +8,8 @@
 
 
 
+#define USER_CACHE_SIZE 30
+
 #define KEEP_TIMESTAMP false
 #define UPDATE_TIMESTAMP true
 
@@ -75,16 +77,19 @@ public:
   void SetName(String n) { name = n; }
   String GetId() { return telegramId; }
   void SetId(String i) { telegramId = i; }
-  Role GetRole() { return roles.GetRole(roleId); }
-  bool SetRole(Role r) { return SetRoleId(roleId); }
+  //  Role GetRole() { return roles.GetRole(roleId); }
+  //  bool SetRole(Role r) { return SetRoleId(r.GetId()); }
   int GetRoleId() { return roleId; }
   bool SetRoleId(int r, bool force=false);
   String GetRoleStr() { return roles.GetRoleStr(roleId); }
-  bool UpgradeRoleId(int r) { if (r < roleId) return SetRoleId(r); else return false; }
+  // this method is the standard method to manage all the side effects of role changes
+  bool UpdateRoleId(int r, bool force=false);
+  // this is method is used in case that the privileges shall only be upgraded
+  bool UpgradeRoleId(int r) { if (r < roleId) return UpdateRoleId(r); else return false; }
   bool IsBot() { return isBot; }
   void SetBot(bool is=true);
   bool IsHolder() { return roleId == ROLE_HOLDER; }
-  bool SetHolder() { SetRoleId(ROLE_HOLDER); }
+  bool SetHolder() { UpdateRoleId(ROLE_HOLDER); }
   bool IsWearer() { return (roleId >= ROLE_WEARER_CAPTURED) && (roleId <= ROLE_WEARER_FREE); }
   bool IsTeaser() { return roleId == ROLE_TEASER; }
   bool IsGuest() { return roleId == ROLE_GUEST; }
@@ -95,18 +100,10 @@ public:
   bool MayBecomeTeaser() { return (IsHolder() || IsTeaser() || IsGuest()); }
   bool MayBecomeHolder();
   bool MayUnlock() { return (IsFreeWearer() || IsWaitingWearer() || IsHolder()); }
-  bool IsSleeping();
+  bool IsSleeping() { return sleeping; }
   void SetSleeping(bool s) { sleeping = s; }
   unsigned long LastMessageTime() { return lastMessageTime; }
   void SetLastMessageTime(unsigned int now) { lastMessageTime = now; }
-};
-
-
-
-class ChatGroup : public User
-{
-public:
-  ChatGroup() {}
 };
 
 
@@ -138,11 +135,13 @@ public:
   int GetHolderIndex() { return holderIndex; }
   String GetHolderName() { return user[holderIndex].GetName(); }
   void SetHolderIndex(int i) { holderIndex = i; }
+  bool IdIsHolder(String id);
   void SetBotIndex(int i) { botIndex = i; }
   int AddUser(String id, String name="", int role=ROLE_GUEST, bool isBot=false);
   unsigned long LastMessageTime() { return lastMessageTime; }
   void SetLastMessageTime(unsigned long now) { lastMessageTime = now; }
   String GetUsersInfo();
+  void Update();
 };
 
 #endif

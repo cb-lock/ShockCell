@@ -2,6 +2,12 @@
 
 #define __EmlaServer_h__
 
+// number of messages in history/reading
+#define MESSAGE_HISTORY_SIZE 40
+// length of a message summary entry (per message)
+#define MESSAGE_SUMMARY_SIZE 60
+
+
 #include "Arduino.h"
 #include "Oled.h"
 

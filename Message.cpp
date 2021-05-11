@@ -6,6 +6,7 @@
 #include "EServer.h"
 #include "TimeF.h"
 #include "User.h"
+#include "Chat.h"
 #include "Session.h"
 
 
@@ -14,8 +15,11 @@ extern TimeFunctions timeFunc;
 extern OledDisplay oledDisplay;
 extern int coverState;
 extern int oldCoverState;
+extern ChatSet chats;
 extern UserSet users;
 extern Session session;
+extern Verification verification;
+extern Tasklist tasklist;
 
 
 
@@ -28,22 +32,23 @@ UniversalTelegramBot bot(BOT_TOKEN, clientsec);
 
 // Checks for new messages every 1 second.
 
-#define BOT_COMMANDS_GENERAL "/start - Start communication\n/state - Report the cover state\n/roles - List roles\n/users - List users in chat\n"
+#define BOT_COMMANDS_GENERAL "/start - Start communication\n/state - Report the cover state\n/roles - List roles\n/users - List users in chat\n/play_6 - Throw dice (any number of possibilities with corresponding number)\n"
 #define BOT_COMMANDS_SHOCKS "/shock_1 - Shock for 1 second (other intervals work with corresponding numbers)\n/shock_5 - Shock for 5 seconds (other intervals work with corresponding numbers)\n/shock_10 - Shock for 10 seconds (other intervals work with corresponding numbers)\n/shock_30 - Shock for 30 seconds (other intervals work with corresponding numbers)\n"
 #define BOT_COMMANDS_RANDOM "/random_5 - Switch on random shock mode with 5 shocks per hour (other intervals work with corresponding numbers)\n/random_off - Switch off random shock mode\n"
 #define BOT_COMMANDS_TEASING "/teasing_on - Enable teasing\n/teasing_off - Disable teasing\n/verify_1 - Enable verification mode with 1 check-in per day\n/verify_2 - Enable verification mode with 2 check-ins per day\n/verify_off - Disable verification mode\n"
-#define BOT_COMMANDS_UNLOCK "/unlock - Unlock key safe\n"
+#define BOT_COMMANDS_TASKS ""
+#define BOT_COMMANDS_UNLOCK "/unlock - Unlock key safe\n/play4unlock - Throw dice to determine if unlocking should be possible\n"
 #define BOT_COMMANDS_ROLES "/holder - Adopt holder role\n/teaser - Adopt teaser role\n/guest - Adopt guest role\n"
 #define BOT_COMMANDS_WAITING "/waiting - Make wearer waiting to be captured by the holder\n/free - Make wearer free again (stops waiting for capture)\n"
 #define BOT_COMMANDS_CAPTURE "/capture - Capture wearer as a sub\n/release - Release wearer as a sub\n"
 #define BOT_COMMANDS_EMERGENCY "/thisisanemergency - Release the wearer in case of an emergency\n"
 
-String botCommandsAll =     BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMANDS_RANDOM BOT_COMMANDS_TEASING BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES BOT_COMMANDS_WAITING BOT_COMMANDS_CAPTURE ;
-String botCommandsWearer =  BOT_COMMANDS_GENERAL                                                              BOT_COMMANDS_UNLOCK                    BOT_COMMANDS_WAITING                      ;
-String botCommandsHolder =  BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMANDS_RANDOM BOT_COMMANDS_TEASING BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES                      BOT_COMMANDS_CAPTURE ;
-String botCommandsGuest =   BOT_COMMANDS_GENERAL                                                                                  BOT_COMMANDS_ROLES                      BOT_COMMANDS_CAPTURE ;
-String botCommandsTeaser =  BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS                                                              BOT_COMMANDS_ROLES                      BOT_COMMANDS_CAPTURE ;
-String botCommandsAllHelp = BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMANDS_RANDOM BOT_COMMANDS_TEASING BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES BOT_COMMANDS_WAITING BOT_COMMANDS_CAPTURE BOT_COMMANDS_EMERGENCY ;
+String botCommandsAll =     BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMANDS_RANDOM BOT_COMMANDS_TEASING                    BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES BOT_COMMANDS_WAITING BOT_COMMANDS_CAPTURE ;
+String botCommandsWearer =  BOT_COMMANDS_GENERAL                                                                                 BOT_COMMANDS_UNLOCK                    BOT_COMMANDS_WAITING                      ;
+String botCommandsHolder =  BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMANDS_RANDOM BOT_COMMANDS_TEASING BOT_COMMANDS_TASKS BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES                      BOT_COMMANDS_CAPTURE ;
+String botCommandsGuest =   BOT_COMMANDS_GENERAL                                                                                                     BOT_COMMANDS_ROLES                      BOT_COMMANDS_CAPTURE ;
+String botCommandsTeaser =  BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS                                                                                 BOT_COMMANDS_ROLES                      BOT_COMMANDS_CAPTURE ;
+String botCommandsAllHelp = BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMANDS_RANDOM BOT_COMMANDS_TEASING                    BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES BOT_COMMANDS_WAITING BOT_COMMANDS_CAPTURE BOT_COMMANDS_EMERGENCY ;
 
 
 /*
@@ -94,19 +99,10 @@ void Message::Init()
   index = users.AddUser(USER_ID_WEARER, USER_NAME_WEARER, ROLE_WEARER_FREE);
   users.SetWearerIndex(index);
 
-  index = users.AddUser(USER_ID_BOT, "Ruler", ROLE_SHOCKCELL);
+  index = users.AddUser(USER_ID_BOT, "ShockCell", ROLE_SHOCKCELL);
   users.GetUser(index)->SetBot(true);
 
-  String description;
-  if (bot.getChatDescription(GROUP_CHAT_ID, description))
-  {
-    AdoptChatDescription(description);
-  }
-  else
-  {
-    // this is only needed for the initial setup of a chat group
-    WriteCommandsAndSettings();
-  }
+  AdoptSettings();
 }
 
 
@@ -120,14 +116,14 @@ void Message::MessageLastShock(String chatId)
 // ------------------------------------------------------------------------
 void Message::MessageIsClosed(String chatId)
 {
-  SendMessage("Key safe is safely closed and locked since " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - session.GetTimeOfLastClosing()) + ".", chatId);
+  SendMessage(SYMBOL_LOCK_CLOSED " Key safe is safely closed and locked since " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - session.GetTimeOfLastClosing()) + ".", chatId);
 }
 
 
 // ------------------------------------------------------------------------
 void Message::MessageIsOpen(String chatId)
 {
-  SendMessage("Key safe is open since " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - session.GetTimeOfLastOpening()) + ".", chatId);
+  SendMessage(SYMBOL_LOCK_OPEN " Key safe is open since " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - session.GetTimeOfLastOpening()) + ".", chatId);
 }
 
 
@@ -138,13 +134,13 @@ void Message::MessageCoverStateChange(String chatId)
   {
     session.SetTimeOfLastClosing(timeFunc.GetTimeInSeconds());
     WriteCommandsAndSettings();
-    SendMessage("Key safe has just been safely closed.", chatId);
+    SendMessage(SYMBOL_LOCK_CLOSED " Key safe has just been safely closed.", chatId);
   }
   else
   {
     session.SetTimeOfLastOpening(timeFunc.GetTimeInSeconds());
     WriteCommandsAndSettings();
-    SendMessage("Key safe has just been opened.", chatId);
+    SendMessage(SYMBOL_LOCK_OPEN " Key safe has just been opened.", chatId);
   }
 }
 
@@ -161,6 +157,20 @@ void Message::MessageCoverState(String chatId)
 
 
 // ------------------------------------------------------------------------
+void Message::MessageSendEarnedCredits(int creditsEarned, String chatId)
+{
+  SendMessage(String(SYMBOL_CREDIT) + " Wearer " + users.GetWearer()->GetName() + " has earned " + creditsEarned + " credits. His new credit balance is " + session.GetCredits() + ".", chatId);
+}
+
+
+// ------------------------------------------------------------------------
+void Message::MessageSendEarnedVouchers(int vouchersEarned, String chatId)
+{
+  SendMessage(String(SYMBOL_VOUCHER) + " Wearer " + users.GetWearer()->GetName() + " has earned " + vouchersEarned + " unlock vouchers. His new voucher balance is " + session.GetVouchers() + ".", chatId);
+}
+
+
+// ------------------------------------------------------------------------
 void Message::MessageModes(String chatId)
 {
   String msg;
@@ -171,23 +181,32 @@ void Message::MessageModes(String chatId)
   SendMessage(msg, chatId);
 
   if (session.IsRandomMode())
-    msg = "Random mode is activated. The wearer receives " + String(session.GetRandomModeShocksPerHour(), DEC) + 
+    msg = SYMBOL_DEVIL_SMILE " Random mode is activated. The wearer receives " + String(session.GetRandomModeShocksPerHour(), DEC) + 
           " random shocks per hour since " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - session.GetTimeOfRandomModeStart()) + 
           ". The random mode will be automatically deactivated after " + timeFunc.Time2String(RANDOM_SHOCK_AUTO_OFF_SECONDS - timeFunc.GetTimeInSeconds() + session.GetTimeOfRandomModeStart()) + ".";
   else
     msg = "Random mode is switched off.";
   SendMessage(msg, chatId);
 
-  if (session.IsVerificationMode())
-    msg = "Verification mode is activated. The wearer must send " + String(session.GetVerificationCountPerDay(), DEC) + " verification photos per day as requested.";
+  if (verification.IsEnabled())
+  {
+    msg = SYMBOL_WATCHING_EYES " Verification mode is activated. The wearer must send " + String(verification.GetRequiredCountPerDay(), DEC) + 
+          " verification photos per day as requested. He has provided " + String(verification.GetActualToday(), DEC) + " photos today.";
+  }
   else
     msg = "Verification mode is switched off.";
   SendMessage(msg, chatId);
 
-  SendMessage("Wearer has collected " + String(session.GetCredits(), DEC) + " credits from random shock treatments.", chatId);
+  SendMessage(SYMBOL_CREDIT " Wearer has collected " + String(session.GetCredits(), DEC) + " credits from shock treatments.", chatId);
+  if (session.GetVouchers() > 0)
+    SendMessage(SYMBOL_VOUCHER " Wearer has collected " + String(session.GetVouchers(), DEC) + " unlock vouchers.", chatId);
+  if (session.GetDeviations() > 0)
+    SendMessage(SYMBOL_SMILE_OHOH " Wearer has missed expectations " + String(session.GetDeviations(), DEC) + " times.", chatId);
+  if (session.GetFailures() > 0)
+    SendMessage(SYMBOL_FORBIDDEN " Wearer has failed " + String(session.GetFailures(), DEC) + " times to complete his tasks.", chatId);
 
   if (users.GetWearer()->IsSleeping())
-    SendMessage("Wearer is currently allowed to sleep and shocks are disabled during that time.");
+    SendMessage(SYMBOL_SLEEPING " Wearer is currently allowed to sleep and shocks are disabled during that time.", chatId);
 }
 
 
@@ -196,12 +215,15 @@ void Message::MessageUsers(String chatId)
 {
   int i = 0;
   String msg = "Users in chat:\n";
-  while (i < USER_CACHE_SIZE)
+  while ((i < users.GetCount()) &&
+         (i < USER_CACHE_SIZE))
   {
     String name = users.GetUser(i)->GetName();
+    Serial.println(String("\"") + name + String("\""));
     if (name.length() > 0)
       msg += "- " + name + " (" + users.GetUser(i)->GetRoleStr() + ")\n";
     ++i;
+    Serial.println(msg);
   }
   SendMessage(msg, chatId);
   //  SendRichMessage(chatId, "inline_keyboard: [\n[{ text: 'Some button text 1', callback_data: '1' }],\n[{ text: 'Some button text 2', callback_data: '2' }],\n[{ text: 'Some button text 3', callback_data: '3' }]\n]");
@@ -253,15 +275,30 @@ void Message::MessageState(String chatId)
 
 
 // ------------------------------------------------------------------------
+void Message::MessageTasks(String chatId)
+{
+  String msg = tasklist.GetTaskList();
+  SendMessage(msg, chatId);
+}
+
+
+// ------------------------------------------------------------------------
 void Message::ShockAction(String durationStr, int count, String fromId, String chatId)
 {
-  unsigned long milliseconds;
-  if (durationStr.length() > 0)
-    milliseconds = durationStr.toInt() * 1000L;
+  if (timeFunc.IsSleepingTime())
+  {
+    SendMessage("Wearer " + users.GetWearer()->GetName() + " is allowed to sleep and cannot be shocked now.", chatId);
+  }
   else
-    milliseconds = 3000;
+  {
+    unsigned long milliseconds;
+    if (durationStr.length() > 0)
+      milliseconds = durationStr.toInt() * 1000L;
+    else
+      milliseconds = 3000;
 
-  ShockAction(milliseconds, count, fromId, chatId);
+    ShockAction(milliseconds, count, fromId, chatId);
+  }
 }
 
 
@@ -275,22 +312,26 @@ void Message::ShockAction(unsigned long milliseconds, int count, String fromId, 
   {
     if (u->IsHolder() ||
         u->IsBot() ||
-        (u->IsTeaser() && session.IsTeasingMode()))
+        (u->IsTeaser() && session.IsTeasingMode()) ||
+        (u->IsWearer() && session.IsTeasingMode()))
     {
-      String msg = "Shock processing for " + String((milliseconds / 1000L), DEC) + " s begins...";
+      String msg = SYMBOL_COLLISION SYMBOL_COLLISION SYMBOL_COLLISION " Shock processing for " + String((milliseconds / 1000L), DEC) + " s begins...";
       SendMessage(msg, chatId);
+      SendMessage(msg, USER_ID_WEARER);
       session.SetTimeOfLastShock(timeFunc.GetTimeInSeconds());
+      session.SetCreditFractions(session.GetCreditFractions() + (milliseconds / 1000), chatId);
       WriteCommandsAndSettings();
 
       session.Shock(count, milliseconds);
 
       msg = "Shock processing completed. :-)";
       SendMessage(msg, chatId);
+      SendMessage(msg, USER_ID_BOT);
       WriteCommandsAndSettings();
     }
     else
     {
-      String msg = "Request denied. Only the holder";
+      String msg = SYMBOL_NO_ENTRY " Request denied. Only the holder";
       if (session.IsTeasingMode())
         msg += " and the teasers";
       msg += " are allowed to execute shock punishments.";
@@ -308,8 +349,8 @@ void Message::WaitingAction(String fromId, String chatId)
   // does request comes from free wearer?
   if (users.GetUserFromId(fromId)->IsFreeWearer())
   {
-    users.GetWearer()->SetRoleId(ROLE_WEARER_WAITING);
-    msg = "Wearer " + users.GetWearerName() + " is now exposed and waiting to be captured by the holder." COMMON_MSG_WAITING;
+    users.GetWearer()->UpdateRoleId(ROLE_WEARER_WAITING);
+    msg = SYMBOL_WATCHING_EYES " Wearer " + users.GetWearerName() + " is now exposed and waiting to be captured by the holder." COMMON_MSG_WAITING;
     SendMessage(msg, chatId);
     WriteCommandsAndSettings();
   }
@@ -327,7 +368,7 @@ void Message::WaitingAction(String fromId, String chatId)
   }
   else
   {
-    msg = "Only the free wearer can use the command /waiting to make himself available for capturing by a holder.";
+    msg = SYMBOL_NO_ENTRY " Only the free wearer can use the command /waiting to make himself available for capturing by a holder.";
     SendMessage(msg, chatId);
   }
 }
@@ -341,7 +382,7 @@ void Message::FreeAction(String fromId, String chatId)
   // does request comes from waiting wearer?
   if (users.GetUserFromId(fromId)->IsWaitingWearer())
   {
-    users.GetWearer()->SetRoleId(ROLE_WEARER_FREE);
+    users.GetWearer()->UpdateRoleId(ROLE_WEARER_FREE);
     msg = "Wearer " + users.GetWearerName() + " is now free and cannot be captured by the holder.";
     SendMessage(msg, chatId);
     WriteCommandsAndSettings();
@@ -355,12 +396,12 @@ void Message::FreeAction(String fromId, String chatId)
   // does request comes from captured wearer?
   else if (users.GetUserFromId(fromId)->IsCapturedWearer())
   {
-    msg = "Request is denied! Wearer " + users.GetWearerName() + " is captured by the holder. He must be released by the holder to get free.";
+    msg = SYMBOL_NO_ENTRY " Request is denied! Wearer " + users.GetWearerName() + " is captured by the holder. He must be released by the holder to get free.";
     SendMessage(msg, chatId);
   }
   else
   {
-    msg = "Only the waiting wearer can use the command /free to be safe from capturing by the holder.";
+    msg = SYMBOL_NO_ENTRY " Only the waiting wearer can use the command /free to be safe from capturing by the holder.";
     SendMessage(msg, chatId);
   }
 }
@@ -377,8 +418,8 @@ void Message::CaptureAction(String fromId, String chatId)
     // or from other user when there is no holder present yet
     if (users.GetWearer()->IsWaitingWearer())
     {
-      users.GetWearer()->SetRoleId(ROLE_WEARER_CAPTURED);
-      msg = "Capturing wearer " + users.GetWearerName() + " now." COMMON_MSG_CAPTURE;
+      users.GetWearer()->UpdateRoleId(ROLE_WEARER_CAPTURED);
+      msg = SYMBOL_LOCK_CLOSED " Capturing wearer " + users.GetWearerName() + " now." COMMON_MSG_CAPTURE;
       // Make requestor a holder if necessary
       if (! users.GetUserFromId(fromId)->IsHolder())
       {
@@ -402,7 +443,7 @@ void Message::CaptureAction(String fromId, String chatId)
     if (users.GetWearer()->IsFreeWearer())
       SendMessage("You currently cannot capture the wearer, because he has not made himself available. The wearer must be waiting for capture using the /waiting command.", chatId);
     else
-      SendMessage("You currently have no permission to capture the wearer. Guests may capture the wearer only, if there is no current holder.", chatId);
+      SendMessage(SYMBOL_NO_ENTRY " You currently have no permission to capture the wearer. Guests may capture the wearer only, if there is no current holder.", chatId);
   }
 }
 
@@ -416,8 +457,8 @@ void Message::ReleaseAction(String fromId, String chatId)
     // request is from holder
     if (users.GetWearer()->IsCapturedWearer())
     {
-      users.GetWearer()->SetRoleId(ROLE_WEARER_WAITING);
-      msg = "Releasing wearer " + users.GetWearerName() + ". He is now released and received back his permissions to open the key safe.\n";
+      users.GetWearer()->UpdateRoleId(ROLE_WEARER_WAITING);
+      msg = SYMBOL_LOCK_OPEN " Releasing wearer " + users.GetWearerName() + ". He is now released and received back his permissions to open the key safe.\n";
       WriteCommandsAndSettings();
     }
     else
@@ -429,7 +470,7 @@ void Message::ReleaseAction(String fromId, String chatId)
   else
   {
     if (users.GetUserFromId(fromId)->IsCapturedWearer())
-      SendMessage("The wearer cannot free himself. Only the holder may release the wearer.", chatId);
+      SendMessage(SYMBOL_NO_ENTRY " The wearer cannot free himself. Only the holder may release the wearer.", chatId);
     else
       SendMessage("You currently have no permission to release the wearer. Only the holder may release the wearer.", chatId);
   }
@@ -453,28 +494,89 @@ void Message::UnlockAction(String fromId, String chatId, bool force)
 
   if (session.IsActiveChastikeySession() && ! force)
   {
-    SendMessageAll("Unlock request is denied! Wearer is locked in an active ChastiKey session.", chatId);
+    SendMessage(SYMBOL_NO_ENTRY " Unlock request is denied! Wearer is locked in an active ChastiKey session.", chatId);
   }
   else if (users.GetUserFromId(fromId)->MayUnlock() || force)
   {
     if (force)
       SendMessageAll("An emergency release request has been granted.", chatId);
-    SendMessageAll("Key safe is unlocking now for 4 seconds and may be opened during this period.", chatId);
+    SendMessageAll(SYMBOL_LOCK_OPEN " Key safe is unlocking now for 4 seconds and may be opened during this period.", chatId);
     session.Unlock();
     // check state of the safe afterwards
     coverState = digitalRead(COVER_OPEN_PIN);
     if (coverState == COVER_OPEN)
     {
-      SendMessageAll("Key safe has been opened.", chatId);
+      SendMessageAll(SYMBOL_KEY " Key safe has been opened.", chatId);
       WriteCommandsAndSettings();
     }
     else
-      SendMessageAll("Key safe is locked again and has not been opened.", chatId);
+      SendMessageAll(SYMBOL_LOCK_CLOSED " Key safe is locked again and has not been opened.", chatId);
   }
   else
   {
-    SendMessageAll("You have no permission to unlock. Only the free wearer or the holder may unlock the key safe.", chatId);
+    SendMessage(SYMBOL_NO_ENTRY " You have no permission to unlock. Only the free wearer or the holder may unlock the key safe.", chatId);
   }
+}
+
+
+// ------------------------------------------------------------------------
+void Message::PlayAction(String max, String fromId, String chatId)
+{
+  int maxCount = max.toInt();
+  if (maxCount > 100)
+    maxCount = 100;
+  else if (maxCount < 2)
+    maxCount = 2;
+  String num[10] = { SYMBOL_DIGIT0, SYMBOL_DIGIT1, SYMBOL_DIGIT2, SYMBOL_DIGIT3, SYMBOL_DIGIT4, SYMBOL_DIGIT5, SYMBOL_DIGIT6, SYMBOL_DIGIT7, SYMBOL_DIGIT8, SYMBOL_DIGIT9 };
+  Serial.println("*** Message::PlayAction()");
+  SendMessage(String(SYMBOL_DICE) + " Playing with dice (1.." + String(maxCount, DEC) + ").", chatId);
+  SendMessage(SYMBOL_DIGIT0 SYMBOL_DIGIT0 " " SYMBOL_DRUM, chatId);
+  delay(300);
+  int lastMessageId = GetLastSentMessageId();
+  int result = (random(90000) * maxCount / 90000) + 1;
+  Serial.println("- value: " + String(result, DEC));
+  int i = 0;
+  String progress = SYMBOL_DRUM;
+  while (i <= result)
+  {
+    progress += ".";
+    EditMessage(num[i / 10] + num[i % 10] + " " + progress, String(lastMessageId, DEC), chatId);
+    if (maxCount < 10)
+      i++;
+    else
+      i = i + maxCount/10;
+  }
+  EditMessage(num[result / 10] + num[result % 10] + " " + SYMBOL_STAR_GLOWING, String(lastMessageId, DEC), chatId);
+}
+
+
+// ------------------------------------------------------------------------
+void Message::Play4UnlockAction(String fromId, String chatId)
+{
+  String num[10] = { SYMBOL_DIGIT0, SYMBOL_DIGIT1, SYMBOL_DIGIT2, SYMBOL_DIGIT3, SYMBOL_DIGIT4, SYMBOL_DIGIT5, SYMBOL_DIGIT6, SYMBOL_DIGIT7, SYMBOL_DIGIT8, SYMBOL_DIGIT9 };
+  Serial.println("*** Message::Play4UnlockAction()");
+  unsigned long duration = timeFunc.GetTimeInSeconds() - session.GetTimeOfLastClosing();
+  int winPoints = session.GetCredits() + timeFunc.GetNumberOfDays(duration);
+  SendMessage(String(SYMBOL_DICE) + " Playing for unlock. Wearer wins for values smaller than: " + num[winPoints / 10] + num[winPoints % 10] +
+              " (" + timeFunc.GetNumberOfDays(duration) + " days locked + " + session.GetCredits() + " credits)", chatId);
+  SendMessage(SYMBOL_DIGIT0 SYMBOL_DIGIT0 " " SYMBOL_DRUM, chatId);
+  delay(300);
+  int lastMessageId = GetLastSentMessageId();
+  int result = (random(90000) / 900);
+  Serial.println("- value: " + String(result, DEC));
+  int i = 0;
+  String progress = SYMBOL_DRUM;
+  while (i < result)
+  {
+    progress += ".";
+    EditMessage(num[i / 10] + num[i % 10] + " " + progress, String(lastMessageId, DEC), chatId);
+    i = i + 5;
+  }
+  EditMessage(num[result / 10] + num[result % 10] + " " + SYMBOL_STAR_GLOWING, String(lastMessageId, DEC), chatId);
+  if (result <= winPoints)
+    SendMessage(SYMBOL_LOCK_OPEN " Wearer has won! " SYMBOL_SMILY_SMILE SYMBOL_SMILY_SMILE SYMBOL_SMILY_SMILE, chatId);
+  else
+    SendMessage(SYMBOL_LOCK_CLOSED " Wearer has lost! " SYMBOL_DEVIL_SMILE SYMBOL_DEVIL_SMILE SYMBOL_DEVIL_SMILE, chatId);
 }
 
 
@@ -486,8 +588,8 @@ void Message::HolderAction(String fromId, String chatId)
 
   if (u && u->MayBecomeHolder())
   {
-    u->SetRoleId(ROLE_HOLDER);
-    msg = "User " + users.GetUserFromId(fromId)->GetName() + " has now holder permissions.";
+    u->UpdateRoleId(ROLE_HOLDER);
+    msg = SYMBOL_QUEEN " User " + users.GetUserFromId(fromId)->GetName() + " has now holder permissions.";
     msg += "The holder can use the following commands:\n" + botCommandsHolder;
     SendMessage(msg, chatId);
     WriteCommandsAndSettings();
@@ -519,16 +621,16 @@ void Message::TeaserAction(String fromId, String chatId)
     msg = "User " + users.GetUserFromId(fromId)->GetName() + " has now teaser permissions.";
     if (u->IsHolder())
     {
-      users.GetWearer()->SetRoleId(ROLE_WEARER_WAITING);
+      users.GetWearer()->UpdateRoleId(ROLE_WEARER_WAITING);
       msg += " Since user " + users.GetUserFromId(fromId)->GetName() + " has given up the holder role, the wearer " + users.GetWearer()->GetName() + " is no longer captured. He is now released and received back his permissions to open the key safe.";
     }
-    u->SetRoleId(ROLE_TEASER);
+    u->UpdateRoleId(ROLE_TEASER);
     SendMessage(msg, chatId);
     WriteCommandsAndSettings();
   }
   else
   {
-    msg = "User " + users.GetUserFromId(fromId)->GetName() + " has no permission to become teaser.";
+    msg = SYMBOL_NO_ENTRY " User " + users.GetUserFromId(fromId)->GetName() + " has no permission to become teaser.";
     SendMessage(msg, chatId);
   }
 }
@@ -544,12 +646,12 @@ void Message::TeasingModeAction(bool mode, String fromId, String chatId)
       SendMessage(COMMON_MSG_TEASING_ON, chatId);
     else
       SendMessage(COMMON_MSG_TEASING_OFF, chatId);
+    WriteCommandsAndSettings();
   }
   else
   {
-    SendMessage("Request denied. Only the holder has the permission to control the rights for users with the teaser role.", chatId);
+    SendMessage(SYMBOL_NO_ENTRY " Request denied. Only the holder has the permission to control the rights for users with the teaser role.", chatId);
   }
-  WriteCommandsAndSettings();
 }
 
 
@@ -564,10 +666,10 @@ void Message::GuestAction(String fromId, String chatId)
     msg = "User " + users.GetUserFromId(fromId)->GetName() + " has now guest permissions.";
     if (u->IsHolder())
     {
-      users.GetWearer()->SetRoleId(ROLE_WEARER_WAITING);
+      users.GetWearer()->UpdateRoleId(ROLE_WEARER_WAITING);
       msg += " Since user " + users.GetUserFromId(fromId)->GetName() + " has given up the holder role, the wearer " + users.GetWearer()->GetName() + " is no longer captured. He is now released and received back his permissions to open the key safe.";
     }
-    u->SetRoleId(ROLE_GUEST);
+    u->UpdateRoleId(ROLE_GUEST);
     SendMessage(msg, chatId);
     WriteCommandsAndSettings();
   }
@@ -606,8 +708,8 @@ void Message::VerificationModeAction(String commandParameter, String fromId, Str
   String msg;
   bool wearerMayUseCommand = false;
   int minimumVerificationCount = 1;
-  if (session.IsVerificationMode())
-    minimumVerificationCount = session.GetVerificationCountPerDay() + 1;
+  if (verification.IsEnabled())
+    minimumVerificationCount = verification.GetRequiredCountPerDay() + 1;
   int verificationsPerDay = commandParameter.toInt();
   if (u->IsWearer() && (verificationsPerDay >= minimumVerificationCount))
     wearerMayUseCommand = true;
@@ -621,20 +723,28 @@ void Message::VerificationModeAction(String commandParameter, String fromId, Str
     {
       if (commandParameter == "off")
       {
-        session.SetVerificationMode(false, 0);
-        SendMessage("Switching verification mode off.", chatId);
+        verification.SetVerificationMode(false, 0);
+        SendMessage("Switching off verification mode.", chatId);
       }
       else
       {
-        if (verificationsPerDay > VERIFICATIONS_MAX)
+        if (verificationsPerDay > MAX_VERIFICATIONS)
         {
           msg += "Maximum setting of required verifications reached.";
-          verificationsPerDay = VERIFICATIONS_MAX;
+          verificationsPerDay = MAX_VERIFICATIONS;
         }
         msg += "Switching on verification mode with " + commandParameter + " photos per day. This regulation remains active until it is switched off by a privileged user.";
-        session.SetVerificationMode(true, verificationsPerDay);
+        verification.SetVerificationMode(true, verificationsPerDay);
         SendMessage(msg, chatId);
       }
+      WriteCommandsAndSettings();
+    }
+    else
+    {
+      if (u->IsWearer() && ! wearerMayUseCommand)
+        SendMessage("User " + u->GetName() + " has no rights to switch off the verification mode or set levels below " + verificationsPerDay + " verifications per day. Only the holder and teasers are allowed to do this.", chatId);
+      else
+        SendMessage("User " + u->GetName() + " has no rights to switch on the verification mode. Only the holder, teasers and the wearer are allowed to do this.", chatId);
     }
   }
 }
@@ -663,7 +773,9 @@ void Message::RandomShockModeAction(String commandParameter, String fromId, Stri
       if (commandParameter == "off")
       {
         int creditsEarned = session.SetRandomMode(false);
-        SendMessage("Switching random mode off. Wearer " + users.GetWearer()->GetName() + " has earned " + creditsEarned + " credits. His new credit balance is " + session.GetCredits() + ".", chatId);
+        SendMessage("Switching off random mode.", chatId);
+        MessageSendEarnedCredits(creditsEarned, chatId);
+        WriteCommandsAndSettings();
       }
       else
       {
@@ -674,11 +786,12 @@ void Message::RandomShockModeAction(String commandParameter, String fromId, Stri
             msg += "Maximum setting of random shocks per hour reached.";
             shocksPerHour = RANDOM_SHOCKS_PER_HOUR_MAX;
           }
-          msg += "Switching on random punishment mode with " + commandParameter + " shocks per hour on average. "
+          msg += SYMBOL_COLLISION " Switching on random punishment mode with " + commandParameter + " shocks per hour on average. "
                  "This punishment remains active until it is switched off by a privileged user, " + String(RANDOM_SHOCK_AUTO_OFF_SECONDS/3600, DEC) +
                  " hours have passed or sleeping time of the wearer " + users.GetWearer()->GetName() + " begins.";
           session.SetRandomMode(true, shocksPerHour);
           SendMessage(msg, chatId);
+          WriteCommandsAndSettings();
         }
         else
         {
@@ -689,9 +802,9 @@ void Message::RandomShockModeAction(String commandParameter, String fromId, Stri
     else
     {
       if (u->IsWearer() && ! wearerMayUseCommand)
-        SendMessage("User " + u->GetName() + " has no rights to switch off the random mode or set levels below " + wearerMinimumShockRate + " shocks per hour. Only the holder and teasers are allowed to do this.");
+        SendMessage("User " + u->GetName() + " has no rights to switch off the random mode or set levels below " + wearerMinimumShockRate + " shocks per hour. Only the holder and teasers are allowed to do this.", chatId);
       else
-        SendMessage("User " + u->GetName() + " has no rights to switch on the random mode. Only the holder, teasers and the wearer are allowed to do this.");
+        SendMessage("User " + u->GetName() + " has no rights to switch on the random mode. Only the holder, teasers and the wearer are allowed to do this.", chatId);
     }
   }
 }
@@ -706,7 +819,7 @@ void Message::CheckVerificationAction(String caption, String fromId, String chat
        (caption.indexOf("verify") != -1) ||
        (caption.indexOf("proof") != -1)))
   {
-    SendMessage("Verification photo detected.", chatId);
+    verification.CheckIn(chatId);
   }
 }
 
@@ -857,20 +970,35 @@ void Message::ProcessNewMessages()
       }
       else if (text == "/unlock")
         UnlockAction(from_id, chat_id);
+      else if (text == "/play4unlock")
+        Play4UnlockAction(from_id, chat_id);
+      else if (text.substring(0, 5) == "/play")
+        PlayAction(text.substring(6), from_id, chat_id);
       else if (text == "/users")
         MessageUsers(chat_id);
       else if (text == "/roles")
         MessageRoles(chat_id);
       else if (text == "/holder")
+      {
         HolderAction(from_id, chat_id);
+        CaptureAction(from_id, chat_id);
+      }
       else if (text == "/teaser")
+      {
+        if (users.IdIsHolder(from_id))
+          ReleaseAction(from_id, chat_id);
         TeaserAction(from_id, chat_id);
+      }
       else if (text == "/teasing_on")
         TeasingModeAction(true, from_id, chat_id);
       else if (text == "/teasing_off")
         TeasingModeAction(false, from_id, chat_id);
       else if (text == "/guest")
+      {
+        if (users.IdIsHolder(from_id))
+          ReleaseAction(from_id, chat_id);
         GuestAction(from_id, chat_id);
+      }
       else if (text == "/waiting")
         WaitingAction(from_id, chat_id);
       else if (text == "/capture")
@@ -879,6 +1007,8 @@ void Message::ProcessNewMessages()
         ReleaseAction(from_id, chat_id);
       else if (text == "/free")
         FreeAction(from_id, chat_id);
+      else if (text == "/tasklist")
+        MessageTasks();
       else if (text.substring(0, 7) == "/verify")
         VerificationModeAction(text.substring(8), from_id, chat_id);
       else if (text.substring(0, 13) == "/verification")
@@ -889,6 +1019,8 @@ void Message::ProcessNewMessages()
       //        RestrictUserAction(from_id, chat_id);
       else if (text == "/thisisanemergency")
         EmergencyAction(from_id, chat_id);
+      else if (text == "/readsettings")
+        AdoptSettings();
       else if (text == "/writesettings")
         WriteCommandsAndSettings();
       else if (text == "/restartshockcell")
@@ -927,6 +1059,23 @@ void Message::SendMessageAll(String msg, String chatId)
 
 
 // -------------------------------------------------
+void Message::EditMessage(String msg, String messageId, String chatId)
+{
+  Serial.print(chatId);
+  Serial.print("> ");
+  Serial.println(msg);
+  bot.editMessage(chatId, messageId, msg);
+}
+
+
+// -------------------------------------------------
+int Message::GetLastSentMessageId()
+{
+  return bot.getLastSentMessageId();
+}
+
+
+// -------------------------------------------------
 void Message::SendRichMessage(String chatId, String msg)
 {
   Serial.print(chatId);
@@ -946,7 +1095,7 @@ void Message::SetChatDescription(String chatId, String descr)
 
 
 // -------------------------------------------------
-long Message::ReadParamLong(String text, String id)
+unsigned long Message::ReadParamLong(String text, String id)
 {
   /*
     Serial.println("ReadParamLong()");
@@ -955,20 +1104,19 @@ long Message::ReadParamLong(String text, String id)
   */
   int paramPos = text.indexOf(id);
   text = text.substring(paramPos);
-  //  Serial.print(text);
-  //  Serial.println();
+  Serial.print(text);
+  Serial.println();
   int nextColon = text.indexOf(':');
-  //  Serial.print(nextColon);
-  //  Serial.println();
+  Serial.print(nextColon);
+  Serial.println();
   int nextSemi = text.indexOf(';');
-  //  Serial.print(nextSemi);
-  //  Serial.println();
+  Serial.print(nextSemi);
+  Serial.println();
   String value = text.substring(nextColon + 1, nextSemi);
-  /*
-    Serial.println("=============");
-    Serial.println(value);
-    Serial.println("=============");
-  */
+  Serial.println("=============");
+  Serial.println(value);
+  Serial.println(atol(value.c_str()));
+  Serial.println("=============");
   return atol(value.c_str());
 }
 
@@ -976,12 +1124,13 @@ long Message::ReadParamLong(String text, String id)
 // -------------------------------------------------
 void Message::AdoptUserInfos(String text)
 {
-  // USERS: Charly:1157999292:Wearer; ShockCell:1264046045:ShockCell; S:919525040:Guest;
-  Serial.println("AdoptUserInfos()");
+  Serial.println("*** AdoptUserInfos()");
   Serial.print(text);
   Serial.println();
   int userPos = text.indexOf(USERS_PREFIX) + String(USERS_PREFIX).length();
-  Serial.print(userPos);
+  int chatPos = text.indexOf(CHATS_PREFIX);
+  text = text.substring(0, chatPos);
+  Serial.println(String("- Input string: ") + text);
   Serial.println();
   int nextColon, nextSemi;
   int roleId;
@@ -1019,49 +1168,162 @@ void Message::AdoptUserInfos(String text)
 
 
 // -------------------------------------------------
-void Message::AdoptChatDescription(String descr)
+void Message::AdoptChatDescription()
 {
+  String descr;
   Serial.println("*** AdoptChatDescription()");
+  
+  if (bot.getChatDescription(GROUP_CHAT_ID, descr))
+  {
+    String response = bot.getMyCommands();
+    DynamicJsonDocument doc(TELEGRAM_MAX_MESSAGE_LENGTH);
+    DeserializationError error = deserializeJson(doc, (char *) response.c_str());
+
+    if (!error)
+    {
+      if (doc.containsKey("result"))
+      {
+        int resultArrayLength = doc["result"].size();
+        if (resultArrayLength > 0)
+        {
+          descr = "";
+          int newMessageIndex = 0;
+          // Step through all results
+          for (int i = 0; i < resultArrayLength; i++)
+          {
+            JsonObject result = doc["result"][i];
+            String command = result["command"];
+            Serial.print("- command: ");
+            Serial.println(command);
+            String description = result["description"];
+            Serial.print("- description: ");
+            Serial.println(description);
+            if (command.charAt(0) == '_')
+              descr += " " + description;
+          }
+        }
+        else
+          Serial.println("- no new messages");
+      }
+      else
+        Serial.println("- Response contained no 'result'");
+    }
+  }
+}
+
+
+// -------------------------------------------------
+void Message::ParseSettings(String & descr)
+{
+  String response = bot.getMyCommands();
+  DynamicJsonDocument doc(TELEGRAM_MAX_MESSAGE_LENGTH);
+  DeserializationError error = deserializeJson(doc, (char *) response.c_str());
+
+  if (!error)
+  {
+    if (doc.containsKey("result"))
+    {
+      int resultArrayLength = doc["result"].size();
+      if (resultArrayLength > 0)
+      {
+        descr = "";
+        int newMessageIndex = 0;
+        // Step through all results
+        for (int i = 0; i < resultArrayLength; i++)
+        {
+          JsonObject result = doc["result"][i];
+          String command = result["command"];
+          Serial.print("- command: ");
+          Serial.println(command);
+          String description = result["description"];
+          Serial.print("- description: ");
+          Serial.println(description);
+          if (command.charAt(0) == '_')
+            descr += " " + description;
+        }
+      }
+      else
+        Serial.println("- no new messages");
+    }
+    else
+      Serial.println("- Response contained no 'result'");
+  }
+
   Serial.print("- descr: ");
   Serial.println(descr);
-  // LastOpening:1598445166; LastClosing:1598445167; LastShock:1598445168; USERS: Charly:1157999292:Wearer; ShockCell:1264046045:ShockCell; S:919525040:Guest;
-  session.SetTimeOfLastOpening(ReadParamLong(descr, LAST_OPENING_TAG));
-  session.SetTimeOfLastClosing(ReadParamLong(descr, LAST_CLOSING_TAG));
-  session.SetTimeOfLastShock(ReadParamLong(descr, LAST_SHOCK_TAG));
-  session.SetTimeOfRandomModeStart(ReadParamLong(descr, RANDOM_MODE_START_TAG));
-  session.SetTeasingModeInt(ReadParamLong(descr, TEASING_MODE_TAG));
-  session.SetRandomModeInt(ReadParamLong(descr, RANDOM_MODE_TAG));
-  Serial.print("- Random Mode: ");
-  Serial.println(session.IsRandomMode());
-  Serial.print("- Random Mode cycle: ");
-  Serial.println(session.GetRandomModeShocksPerHour());
-//  session.SetRandomMode(false, 5);
-  session.SetVerificationModeInt(ReadParamLong(descr, VERIFICATION_MODE_TAG));
-  session.SetCredits(ReadParamLong(descr, CREDITS_TAG));
-  //  info += users.GetUsersInfo();
-  AdoptUserInfos(descr);
+}
+
+
+// -------------------------------------------------
+void Message::AdoptSettings()
+{
+  String descr;
+  Serial.println("*** AdoptSettings()");
+
+  if (bot.getChatDescription(GROUP_CHAT_ID, descr))
+  {
+    AdoptChatDescription();
+    ParseSettings(descr);
+    // LastOpening:1598445166; LastClosing:1598445167; LastShock:1598445168; USERS: Charly:1157999292:Wearer; ShockCell:1264046045:ShockCell; S:919525040:Guest;
+    session.SetTimeOfLastOpening(ReadParamLong(descr, LAST_OPENING_TAG));
+    session.SetTimeOfLastClosing(ReadParamLong(descr, LAST_CLOSING_TAG));
+    session.SetTimeOfLastShock(ReadParamLong(descr, LAST_SHOCK_TAG));
+    session.SetTimeOfRandomModeStart(ReadParamLong(descr, RANDOM_MODE_START_TAG));
+    verification.Reset();
+    verification.SetVerificationModeInt(ReadParamLong(descr, VERIFICATION_MODE_TAG));
+    verification.SetActualToday((int) ReadParamLong(descr, ACTUAL_VERIFICATIONS_TAG));
+    verification.SetDayOfWeek((int) ReadParamLong(descr, DAY_OF_WEEK_TAG));
+    for (int i = 0; i < verification.GetRequiredCountPerDay(); i++)
+    {
+      verification.GetEvent(i)->SetTimeOfBegin(ReadParamLong(descr, NEXT_VERIFICATION_BEGIN_TAG + String(i, DEC)));
+      verification.GetEvent(i)->SetTimeOfEnd(ReadParamLong(descr, NEXT_VERIFICATION_END_TAG + String(i, DEC)));
+      Serial.println("- begin: " + timeFunc.Time2StringNoDays(verification.GetEvent(i)->GetTimeOfBegin()));
+      Serial.println("- end: " + timeFunc.Time2StringNoDays(verification.GetEvent(i)->GetTimeOfEnd()));
+      if (timeFunc.GetTimeInSeconds() > verification.GetEvent(i)->GetTimeOfBegin())
+      {
+        // we do not need to check, if we are past the end. This is handled in ProcessVerification()
+        verification.SetCurrentIndex(i);
+      }
+      if ((i > 0) && (i < (verification.GetRequiredCountPerDay() - 1)))
+        verification.GetEvent(i)->SetRandom(true);
+    }
+    verification.Print();
+
+    session.SetTeasingModeInt(ReadParamLong(descr, TEASING_MODE_TAG));
+    session.SetRandomModeInt(ReadParamLong(descr, RANDOM_MODE_TAG));
+    Serial.print("- random Mode: ");
+    Serial.println(session.IsRandomMode());
+    Serial.print("- random Mode cycle: ");
+    Serial.println(session.GetRandomModeShocksPerHour());
+  //  session.SetRandomMode(false, 5);
+    session.SetCredits(ReadParamLong(descr, CREDITS_TAG));
+    session.SetVouchers(ReadParamLong(descr, VOUCHER_TAG));
+    session.SetDeviations(ReadParamLong(descr, DEVIATIONS_TAG));
+    session.SetFailures(ReadParamLong(descr, FAILURES_TAG));
+    //  info += users.GetUsersInfo();
+    AdoptUserInfos(descr);
+  }
+  else
+  {
+    // this is only needed for the initial setup of a chat group
+    WriteCommandsAndSettings();
+  }
 }
 
 
 /*
 /start - Start communication\n
-[{"command":"start","description":"Start communication"},{"command":"goles","description":"List roles"},{"command":"shock1","description":"Shock for 1 seconds"},{"command":"shock3","description":"Shock for 3 seconds"},{"command":"shock5","description":"Shock for 5 seconds"},{"command":"shock10","description":"Shock for 10 seconds"},{"command":"shock30","description":"Shock for 30 seconds"},{"command":"state","description":"Report the cover state"},{"command":"unlock","description":"Unlock key safe"},{"command":"users","description":"Lists users in chat"},{"command":"holder","description":"Adopt holder role"},{"command":"teaser","description":"Adopt teaser role"},{"command":"guest","description":"Adopt guest role"},{"command":"waiting","description":"Make wearer waiting to be captured by the holder"},{"command":"free","description":"Make wearer free again (stops waiting for capturing by the holder)"},{"command":"capture","description":"Capture wearer as a sub"},{"command":"release","description":"Release wearer as a sub"},{"command":"_lasttimes","description":"LastOpening:1604473444; LastClosing:1604473509; LastShock:1604853044; RandomModeStart:1604847654;"},{"command":"_modes","description":"TeasingMode:1; RandomMode:0; Credits:0;"},{"command":"_userlist","description":"Charly:1157999292:Wearer/captured; Ruler:1264046045:ShockCell; S:919525040:Guest; roberta:1209481168:Holder; Spark:780464021:Teaser"}]
+[{"command":"start","description":"Start communication"},{"command":"roles","description":"List roles"},{"command":"shock1","description":"Shock for 1 seconds"},{"command":"shock3","description":"Shock for 3 seconds"},{"command":"shock5","description":"Shock for 5 seconds"},{"command":"shock10","description":"Shock for 10 seconds"},{"command":"shock30","description":"Shock for 30 seconds"},{"command":"state","description":"Report the cover state"},{"command":"unlock","description":"Unlock key safe"},{"command":"users","description":"Lists users in chat"},{"command":"holder","description":"Adopt holder role"},{"command":"teaser","description":"Adopt teaser role"},{"command":"guest","description":"Adopt guest role"},{"command":"waiting","description":"Make wearer waiting to be captured by the holder"},{"command":"free","description":"Make wearer free again (stops waiting for capturing by the holder)"},{"command":"capture","description":"Capture wearer as a sub"},{"command":"release","description":"Release wearer as a sub"},{"command":"_lasttimes","description":"LastOpening:1604473444; LastClosing:1604473509; LastShock:1604853044; RandomModeStart:1604847654;"},{"command":"_modes","description":"TeasingMode:1; RandomMode:0; Credits:0;"},{"command":"_userlist","description":"Charly:1157999292:Wearer/captured; Ruler:1264046045:ShockCell; S:919525040:Guest; roberta:1209481168:Holder; Spark:780464021:Teaser"}]
 */
 // -------------------------------------------------
 void Message::WriteCommandsAndSettings()
 {
   // This is the old way of storing the settings
-  Serial.println("*** UpdateChatDescription()");
+  // Redundant saving...
+  Serial.println("*** WriteCommandsAndSettings()");
   String info;
-  info = LAST_OPENING_TAG ":" + String(session.GetTimeOfLastOpening(), DEC) + "; ";
-  info += LAST_CLOSING_TAG ":" + String(session.GetTimeOfLastClosing(), DEC) + "; ";
-  info += LAST_SHOCK_TAG ":" + String(session.GetTimeOfLastShock(), DEC) + "; ";
-  info += RANDOM_MODE_START_TAG ":" + String(session.GetTimeOfRandomModeStart(), DEC) + "; ";
-  info += TEASING_MODE_TAG ":" + String(session.GetTeasingModeInt(), DEC) + "; ";
-  info += RANDOM_MODE_TAG ":" + String(session.GetRandomModeInt(), DEC) + "; ";
-  info += VERIFICATION_MODE_TAG ":" + String(session.GetVerificationModeInt(), DEC) + "; ";
-  info += CREDITS_TAG ":" + String(session.GetCredits(), DEC) + "; ";
-  info += USERS_PREFIX " ";
+  info = verification.GetHash();
+  info += " " USERS_PREFIX " ";
   info += users.GetUsersInfo();
 
   // we need to make sure that the description is changed with every request and not identical to the existing one.
@@ -1074,7 +1336,6 @@ void Message::WriteCommandsAndSettings()
 
   // ----------------------------------------------
   // This is the new way of storing the settings
-  Serial.println("*** WriteCommandsAndSettings()");
   String commands = "[";
   Serial.println(botCommandsAll);
   int pos = 0;
@@ -1100,6 +1361,38 @@ void Message::WriteCommandsAndSettings()
     }
     pos++;
   }
+
+  // write setting times
+  commands += "{\"command\":\"_settingtimes\",\"description\":\""
+              LAST_OPENING_TAG ":" + String(session.GetTimeOfLastOpening(), DEC) + "; "
+              LAST_OPENING_TAG ":" + String(session.GetTimeOfLastOpening(), DEC) + "; "
+              LAST_CLOSING_TAG ":" + String(session.GetTimeOfLastClosing(), DEC) + "; "
+              LAST_SHOCK_TAG ":" + String(session.GetTimeOfLastShock(), DEC) + "; "
+              RANDOM_MODE_START_TAG ":" + String(session.GetTimeOfRandomModeStart(), DEC) + "; "
+              "\"},";
+  commands += "{\"command\":\"_verification\",\"description\":\"";
+  for (int i = 0; i < MAX_VERIFICATIONS; i++)
+    commands += NEXT_VERIFICATION_BEGIN_TAG + String(i, DEC) + ":" + String(verification.GetEvent(i)->GetTimeOfBegin(), DEC) + "; " +
+                NEXT_VERIFICATION_END_TAG + String(i, DEC) + ":" + String(verification.GetEvent(i)->GetTimeOfEnd(), DEC) + "; ";
+  commands += "\"},";
+  commands += "{\"command\":\"_settingmodes\",\"description\":\""
+              TEASING_MODE_TAG ":" + String(session.GetTeasingModeInt(), DEC) + "; "
+              RANDOM_MODE_TAG ":" + String(session.GetRandomModeInt(), DEC) + "; "
+              VERIFICATION_MODE_TAG ":" + String(verification.GetVerificationModeInt(), DEC) + "; "
+              ACTUAL_VERIFICATIONS_TAG ":" + String(verification.GetActualToday(), DEC) + "; "
+              DAY_OF_WEEK_TAG ":" + String(verification.GetDayOfWeek(), DEC) + "; "
+              CREDITS_TAG ":" + String(session.GetCredits(), DEC) + "; "
+              VOUCHER_TAG ":" + String(session.GetVouchers(), DEC) + "; "
+              DEVIATIONS_TAG ":" + String(session.GetDeviations(), DEC) + "; "
+              FAILURES_TAG ":" + String(session.GetFailures(), DEC) + "; "
+              "\"},";
+  commands += "{\"command\":\"_users\",\"description\":\"" " " USERS_PREFIX " " +
+              users.GetUsersInfo() +
+              "\"},";
+  commands += "{\"command\":\"_chats\",\"description\":\"" " " CHATS_PREFIX " " +
+              chats.GetChatsInfo() +
+              "\"},";
+
   // remove last comma
   commands.remove(commands.length() - 1);
   commands += "]";

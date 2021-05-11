@@ -1,10 +1,6 @@
 //#define TELEGRAM_DEBUG 1
 
-#define HTTP_BUFFER_SIZE 10
-
 #define MENU_STATE_COUNT 4
-
-#define USER_CACHE_SIZE 30
 
 #define RANDOM_PUNISHMENT_PROBABILITY 5
 #define RANDOM_SHOCK_AUTO_OFF_SECONDS (3*3600)
@@ -18,20 +14,10 @@
 #define TIME_MAXIMUM 7200
 
 #define SLEEP_TIME_BEGIN 23
-#define SLEEP_TIME_END 7
-
-#define SHOCKS_PER_SESSION 50
-#define SHOCK_BACKFILL_PROBABILITY 100
-#define SHOCK_NEEDINESS_THRESHOLD 60.0
-#define SHOCK_COUNT_MAXMIMUM 30
-#define SHOCK_DURATION_MINIMUM 1000
-#define SHOCK_DURATION_DEFAULT 2000
-#define SHOCK_DURATION_MAXIMUM 20000
-#define SHOCK_BREAK_DURATION 2000
+#define SLEEP_TIME_END_WORKDAYS 7
+#define SLEEP_TIME_END_WEEKEND 10
 
 #define UNLOCK_DURATION 4000
-
-#define VERIFICATIONS_MAX 5
 
 #define REQUIREMENTS_ENABLED false
 #define REQUIREMENTS_REQUEST_MAX 20
@@ -42,11 +28,6 @@
 #define PILLORY_MINIMUM 1800
 #define PILLORY_MAXIMUM 7200
 
-// number of messages in history/reading
-#define MESSAGE_HISTORY_SIZE 40
-// length of a message summary entry (per message)
-#define MESSAGE_SUMMARY_SIZE 60
-
 #define NO_REPLY false
 #define IS_REPLY true
 
@@ -55,16 +36,24 @@
 #define ONLY_NAME true
 #define FULL false
 
+
 // ---------------------------------
 // Persisted values
 #define LAST_OPENING_TAG "LAOP"
+//#define LAST_OPENING_TAG "LastOpening"
 #define LAST_CLOSING_TAG "LACL"
 #define LAST_SHOCK_TAG "LASH"
+//#define LAST_SHOCK_TAG "LastShock"
 #define RANDOM_MODE_START_TAG "RAMS"
+//#define RANDOM_MODE_START_TAG "RandomModeStart"
 #define TEASING_MODE_TAG "TEMO"
+//#define TEASING_MODE_TAG "TeasingMode"
 #define RANDOM_MODE_TAG "RAMO"
+//#define RANDOM_MODE_TAG "RandomMode"
 #define VERIFICATION_MODE_TAG "VEMO"
 #define CREDITS_TAG "CRED"
+//#define CREDITS_TAG "Credits"
+#define FAILURES_TAG "FAIL"
 
 // ---------------------------------
 
@@ -96,6 +85,7 @@
 // TELEGRAM
 
 #define BOT_REQUEST_INTERVAL 1000
+
 #define GROUP_CHAT_ID "TELEGRAM_CHAT_ID_FOR_GROUP"
 #define USER_ID_BOT "TELEGRAM_ID_BOT"
 // Initialize Telegram bot

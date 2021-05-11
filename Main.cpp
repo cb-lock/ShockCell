@@ -7,6 +7,7 @@
 #include "EServer.h"
 #include "Message.h"
 #include "Session.h"
+#include "Chat.h"
 #include "User.h"
 
 // ---------------------------------
@@ -20,9 +21,11 @@ int oldCoverState = 0;
 TimeFunctions timeFunc;
 EmlaServer emlaServer(oledDisplay);
 Message message;
+Tasklist tasklist;
+Verification verification;
 Session session;
 
-ChatGroup chatGroup;
+ChatSet chats;
 UserSet users;
 
 unsigned long lastTimeBotRan;
@@ -61,7 +64,7 @@ void setup()
   // 2000*60 = 120000
   // 10000*60 = 600000
   // void timerAlarmWrite(hw_timer_t *timer, uint64_t alarm_value, bool autoreload)
-  timerAlarmWrite(watchdogTimer, 1200000, false); //set time in us
+  timerAlarmWrite(watchdogTimer, 1200000L, false); //set time in us
   // void timerAlarmEnable(hw_timer_t *timer)
   timerAlarmEnable(watchdogTimer); //enable interrupt
 
@@ -129,15 +132,17 @@ void setup()
   }
 
   // --------------------------------------------------------------------------
+  timeFunc.UpdateDSTOffset();
   timeFunc.SetClock();
   randomSeed(timeFunc.GetTimeInSeconds());
 
   coverState = digitalRead(COVER_OPEN_PIN);
   oldCoverState = coverState;
 
+  tasklist.Init();
+  verification.Init();
   message.Init();
   session.InfoChastikey();
-
   session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
   session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
 }
@@ -176,36 +181,21 @@ void loop()
     session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
   }
 
+  // every 1 minute
+  if (timeFunc.GetTimeInSeconds() >= (session.GetTimeOfLast1minInterval() + 60))
+  {
+    verification.ProcessVerification(GROUP_CHAT_ID);
+    timeFunc.ProcessSleepTime();
+    // this method calls tasklist.ProcessTasks() in the morning and evening
+
+    session.SetTimeOfLast1minInterval(timeFunc.GetTimeInSeconds());
+  }
+
   // every 5 minutes
   if (timeFunc.GetTimeInSeconds() >= (session.GetTimeOfLast5minInterval() + 5*60))
   {
+    verification.Schedule();
 //    mistress.CheckOffline();
-    session.ProcessVerification();
-
-    // has the sleeping period just begun?
-    if (users.GetHolder())
-    {
-      bool wasSleeping = users.GetWearer()->IsSleeping();
-      if (timeFunc.SleepingTimeJustChanged(true))
-      {
-        users.GetWearer()->SetSleeping(true);
-//        if (! wasSleeping)
-        {
-          msg = "Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.";
-          message.SendMessage(msg);
-        }
-      }
-      // has the sleeping period just ended?
-      if (timeFunc.SleepingTimeJustChanged(false))
-      {
-        users.GetWearer()->SetSleeping(false);
-        if (wasSleeping)
-        {
-          msg = "Good morning "  + users.GetWearer()->GetName() + ", wake up boy!";
-          message.SendMessage(msg);
-        }
-      }
-    }
 
     if (session.GetEmergencyReleaseCounterRequest())
     {
@@ -224,6 +214,7 @@ void loop()
       }
     }
     session.SetEmergencyReleaseCounterRequest(false);
+    timeFunc.UpdateDSTOffset();
 
     session.SetTimeOfLast5minInterval(timeFunc.GetTimeInSeconds());
   }
