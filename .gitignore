@@ -36,3 +36,5 @@
 
 # Private files
 Defs.h
+*.cpp~
+*.h~
