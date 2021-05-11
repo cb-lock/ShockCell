@@ -9,15 +9,18 @@
 class TimeFunctions
 {
 private:
+  int dstOffset = 1;
+
 public:
-  String Time2String(const long seconds);
-  String Time2StringNoDays(const long seconds);
-  String Time2StringNoDaysCompact(const long seconds);
+  String Time2String(const long seconds, bool duration=false);
+  String Time2StringNoDays(const long seconds, bool duration=false);
+  String Time2StringNoDaysCompact(const long seconds, bool duration=false);
   unsigned long GetTimeInSeconds();
   int GetHours();
   int GetMinutes();
   unsigned long GetMidnightToday();
   int GetDayOfWeek() { return (((GetTimeInSeconds() / 86400L) + 3) % 7); }
+  int UpdateDSTOffset();
   int GetNumberOfDays(unsigned long duration) { return (duration / 86400); }
   bool IsWeekend();
   bool IsSleepingTime();

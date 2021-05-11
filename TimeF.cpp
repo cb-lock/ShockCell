@@ -28,7 +28,7 @@ bool TimeFunctions::IsWeekend()
 
 
 // ------------------------------------------------------------------------
-String TimeFunctions::Time2String(const long seconds)
+String TimeFunctions::Time2String(const long seconds, bool duration)
 {
 //  Serial.println("Time2String()");
 //  Serial.println(seconds);
@@ -46,16 +46,23 @@ String TimeFunctions::Time2String(const long seconds)
 
 
 // ------------------------------------------------------------------------
-String TimeFunctions::Time2StringNoDays(const long seconds)
+String TimeFunctions::Time2StringNoDays(const long seconds, bool duration)
 {
-  return Time2String((seconds % 86400) + UTC_OFFSET*3600);
+  if (duration)
+    return Time2String((seconds % 86400));
+  else
+    return Time2String((seconds % 86400) + dstOffset*3600);
 }
 
 
 // ------------------------------------------------------------------------
-String TimeFunctions::Time2StringNoDaysCompact(const long seconds)
+String TimeFunctions::Time2StringNoDaysCompact(const long seconds, bool duration)
 {
-  String str = Time2String((seconds % 86400) + UTC_OFFSET*3600);
+  String str;
+  if (duration)
+    str = Time2String(seconds % 86400);
+  else
+    str = Time2String((seconds % 86400) + dstOffset*3600);
   int pos = str.indexOf('h');
   if (pos >= 0)
     str.remove(pos, 2);
@@ -67,12 +74,26 @@ String TimeFunctions::Time2StringNoDaysCompact(const long seconds)
 
 
 // ------------------------------------------------------------------------
+int TimeFunctions::UpdateDSTOffset()
+{
+  time_t nowSecs = GetTimeInSeconds();
+  struct tm timeinfo;
+  gmtime_r(&nowSecs, &timeinfo);
+  int month = timeinfo.tm_mon + 1;
+  if ((month >= 4) && (month <= 10))
+    dstOffset = 2;
+  else
+    dstOffset = 1;
+}
+
+
+// ------------------------------------------------------------------------
 unsigned long TimeFunctions::GetMidnightToday()
 {
   time_t nowSecs = GetTimeInSeconds();
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
-  int hours = (timeinfo.tm_hour + UTC_OFFSET) % 24;
+  int hours = (timeinfo.tm_hour + dstOffset) % 24;
   return GetTimeInSeconds() - (hours*3600 + timeinfo.tm_min*60 + timeinfo.tm_sec);
 }
 
@@ -106,7 +127,7 @@ int TimeFunctions::GetHours()
   time_t nowSecs = GetTimeInSeconds();
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
-  int hours = (timeinfo.tm_hour + UTC_OFFSET) % 24;
+  int hours = (timeinfo.tm_hour + dstOffset) % 24;
   return hours;
 }
 
@@ -128,7 +149,7 @@ bool TimeFunctions::IsSleepingTime()
   time_t nowSecs = GetTimeInSeconds();
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
-  int hours = (timeinfo.tm_hour + UTC_OFFSET) % 24;
+  int hours = (timeinfo.tm_hour + dstOffset) % 24;
   int sleepingExtension = IsWeekend() ? 3 : 0;
   /*
   Serial.print("- sleepingExtension: ");
@@ -159,7 +180,7 @@ bool TimeFunctions::SleepingTimeJustChanged(bool started)
   time_t nowSecs = GetTimeInSeconds();
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
-  int hours = (timeinfo.tm_hour + UTC_OFFSET) % 24;
+  int hours = (timeinfo.tm_hour + dstOffset) % 24;
 
   // sleeping time just started?
   if (started)
@@ -192,7 +213,7 @@ String TimeFunctions::GetTimeString(unsigned long t)
     nowSecs = t;
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
-  int hours = (timeinfo.tm_hour + UTC_OFFSET) % 24;
+  int hours = (timeinfo.tm_hour + dstOffset) % 24;
 
   char buf[100];
   sprintf(buf, "%02d:%02d.%02d", hours, timeinfo.tm_min, timeinfo.tm_sec);

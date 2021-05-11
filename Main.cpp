@@ -132,6 +132,7 @@ void setup()
   }
 
   // --------------------------------------------------------------------------
+  timeFunc.UpdateDSTOffset();
   timeFunc.SetClock();
   randomSeed(timeFunc.GetTimeInSeconds());
 
@@ -213,6 +214,7 @@ void loop()
       }
     }
     session.SetEmergencyReleaseCounterRequest(false);
+    timeFunc.UpdateDSTOffset();
 
     session.SetTimeOfLast5minInterval(timeFunc.GetTimeInSeconds());
   }
