@@ -2,6 +2,8 @@
 
 #define __TimeFunctions_h__
 
+#define TIME_MAX 4102444799L
+
 #include "Arduino.h"
 
 class TimeFunctions

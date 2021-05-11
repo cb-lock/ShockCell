@@ -2,6 +2,11 @@
 
 #define __Session_h__
 
+#define MAX_TASKS 10
+#define TASK_GENERAL 0
+#define TASK_CONFIRMATION 1
+#define TASK_NONE -1
+
 #define MAX_VERIFICATIONS 5
 #define VERIFICATION_STATUS_BEFORE 0
 #define VERIFICATION_STATUS_WAITING 1
@@ -29,40 +34,95 @@
 
 
 
-class VerificationEvent
+class Task
 {
 private:
   int index = 0;
+  bool active = false; // if not active, task slot is empty and available for new tasks
+  int tType = TASK_GENERAL;
+  String message;
   unsigned long timeOfBegin = 0;
   unsigned long timeOfEnd = 0;
-  bool isRandom = false;
-  bool needsCode = false;
-  String code;
   bool announcedBegin = false;
   bool announcedEnd = false;
   bool fulfilled = false;
+  // Confirmation
+  bool holderConfirmed = false;
+  bool wearerConfirmed = false;
 
 public:
-  VerificationEvent() {}
+  Task() {}
   int GetIndex() { return index; }
   void SetIndex(int i) { index = i; }
-  bool IsRandom() { return isRandom; }
-  void SetRandom(bool a) { isRandom = a; }
-  bool NeedsCode() { return needsCode; }
-  void SetNeedsCode(bool c) { needsCode = c; }
-  String GetCode() { return code; }
-  void SetCode(String c) { code = c; }
+  bool IsActive() { return active; }
+  void SetActive(bool a) { active = a; }
+  int GetType() { return tType; }
+  void SetType(int t) { tType = t; }
+  String GetMessage() { return message; }
+  void SetMessage(String msg) { message = msg; }
+  unsigned long GetTimeOfBegin() { return timeOfBegin; }
+  void SetTimeOfBegin(unsigned long theTime) { timeOfBegin = theTime; }
+  unsigned long GetTimeOfEnd() { return timeOfEnd; }
+  void SetTimeOfEnd(unsigned long theTime) { timeOfEnd = theTime; }
   bool IsAnnouncedBegin() { return announcedBegin; }
   void SetAnnouncedBegin(bool a) { announcedBegin = a; }
   bool IsAnnouncedEnd() { return announcedEnd; }
   void SetAnnouncedEnd(bool a) { announcedEnd = a; }
   bool IsFulfilled() { return fulfilled; }
   void SetFulfilled(bool f) { fulfilled = f; }
-  unsigned long GetTimeOfBegin() { return timeOfBegin; }
-  void SetTimeOfBegin(unsigned long theTime) { timeOfBegin = theTime; }
-  unsigned long GetTimeOfEnd() { return timeOfEnd; }
-  void SetTimeOfEnd(unsigned long theTime) { timeOfEnd = theTime; }
-  void Reset() { timeOfBegin = 0; timeOfEnd = 0; isRandom = false; needsCode = false; announcedBegin = false; announcedEnd = false; fulfilled = false; }
+  void Reset() { active = false; tType = TASK_GENERAL; message = ""; timeOfBegin = 0; timeOfEnd = 0; announcedBegin = false; announcedEnd = false; fulfilled = false; holderConfirmed = false; wearerConfirmed = false; }
+  void Print();
+  // Confirmation
+  bool HasHolderConfirmed() { return holderConfirmed; }
+  void SetHolderConfirmed(bool c) { holderConfirmed = c; }
+  bool HasWearerConfirmed() { return wearerConfirmed; }
+  void SetWearerConfirmed(bool c) { wearerConfirmed = c; }
+
+  void Create(String msg) { SetActive(true); SetMessage(msg); }
+  String GetStatusMessage();
+  void Complete() { SetActive(false); SetFulfilled(true); }
+};
+
+
+class Tasklist
+{
+private:
+  Task task[MAX_TASKS];
+
+public:
+  Tasklist() {}
+
+  int GetActiveTaskCount() { int aCount = 0; for(int i = 0; i < MAX_TASKS; i++) { if (task[i].IsActive()) aCount++; } return aCount; }
+  Task * GetTask(int i) { if (i < MAX_TASKS) return &task[i]; else return NULL; }
+  int FindFreeIndex();
+
+  void Init();
+  void Reset();
+  int Add(String msg, int tType=TASK_GENERAL, unsigned long tBegin=0, unsigned long tEnd=TIME_MAX);
+  const String GetTaskList();
+  void Print();
+};
+
+
+class VerificationEvent : public Task
+{
+private:
+  bool isRandom = false;
+  bool needsCode = false;
+  String code;
+
+public:
+  VerificationEvent() {}
+  bool IsRandom() { return isRandom; }
+  void SetRandom(bool a) { isRandom = a; }
+  bool NeedsCode() { return needsCode; }
+  void SetNeedsCode(bool c) { needsCode = c; }
+  String GetCode() { return code; }
+  void SetCode(String c) { code = c; }
+  void SetRandomCode() { String vCode = String(random(1000), DEC); while (vCode.length() < 3) vCode = "0" + vCode; SetCode(vCode); }
+  void Reset() { Task::Reset(); isRandom = false; needsCode = false; }
+  void Activate(unsigned long windowStart, unsigned long windowEnd);
+  void Print();
 };
 
 
@@ -98,11 +158,13 @@ public:
   VerificationEvent * GetEvent(int i) { if (i < MAX_VERIFICATIONS) return &event[i]; else return NULL; }
   VerificationEvent * GetCurrentEvent() { if (currentIndex < MAX_VERIFICATIONS) return &event[currentIndex]; else return NULL; }
   unsigned long GetTimeOfNextBegin() { return event[currentIndex].GetTimeOfBegin(); }
-  unsigned long GetTimeOfNextEnd() { return event[currentIndex].GetTimeOfBegin(); }
+  unsigned long GetTimeOfNextEnd() { return event[currentIndex].GetTimeOfEnd(); }
+  String GetHash();
 
-  void Reset() { currentIndex = 0; dayIsCompleted = false; for (int i = 0; i < MAX_VERIFICATIONS; i++) event[i].Reset(); }
+  void Reset();
   void WindowCompleted();
-  void Schedule();
+  void Print();
+  void Schedule(bool force=false);
   void CheckIn(String chatId);
   void ProcessVerification(String chatId);
 };
@@ -121,6 +183,7 @@ private:
   unsigned long randomShocksPerHour = 1;
   bool teasingMode = true;
   int credits = 0;
+  int unlockVouchers = 0;
   int creditFractions = 0;
   int deviations = 0;
   int failures = 0;
@@ -203,6 +266,9 @@ public:
   void SetRandomModeInt(int mode) { randomShockMode = (mode > 0); randomShocksPerHour = mode; }
   int GetRandomModeInt() { return randomShockMode ? randomShocksPerHour : 0; }
 
+  void SetVouchers(int newVal) { unlockVouchers = newVal; }
+  void SetVouchers(int newVal, String chatId);
+  int GetVouchers() { return unlockVouchers; }
   void SetCredits(int newVal) { credits = newVal; }
   void SetCredits(int newVal, String chatId);
   int GetCredits() { return credits; }

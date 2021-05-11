@@ -21,6 +21,7 @@ int oldCoverState = 0;
 TimeFunctions timeFunc;
 EmlaServer emlaServer(oledDisplay);
 Message message;
+Tasklist tasklist;
 Verification verification;
 Session session;
 
@@ -137,6 +138,7 @@ void setup()
   coverState = digitalRead(COVER_OPEN_PIN);
   oldCoverState = coverState;
 
+  tasklist.Init();
   verification.Init();
   message.Init();
   session.InfoChastikey();
@@ -183,7 +185,8 @@ void loop()
   {
     verification.ProcessVerification(GROUP_CHAT_ID);
     timeFunc.ProcessSleepTime();
-    
+    // this method calls tasklist.ProcessTasks() in the morning and evening
+
     session.SetTimeOfLast1minInterval(timeFunc.GetTimeInSeconds());
   }
 

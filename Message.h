@@ -13,6 +13,7 @@
 //#define RANDOM_MODE_START_TAG "RandomModeStart"
 #define NEXT_VERIFICATION_BEGIN_TAG "VSTA"
 #define NEXT_VERIFICATION_END_TAG "VEND"
+#define DAY_OF_WEEK_TAG "DOWE"
 #define TEASING_MODE_TAG "TEMO"
 //#define TEASING_MODE_TAG "TeasingMode"
 #define RANDOM_MODE_TAG "RAMO"
@@ -21,6 +22,7 @@
 #define ACTUAL_VERIFICATIONS_TAG "ACTV"
 #define CREDITS_TAG "CRED"
 //#define CREDITS_TAG "Credits"
+#define VOUCHER_TAG "VOUC"
 #define DEVIATIONS_TAG "DEVN"
 #define FAILURES_TAG "FAIL"
 #define USERS_PREFIX "USERS:"
@@ -56,8 +58,10 @@
 #define SYMBOL_STOP "\xf0\x9f\x9b\x91"
 #define SYMBOL_OK "\xf0\x9f\x86\x97"
 #define SYMBOL_NO_ENTRY "\xe2\x9b\x94"
+// goodies
 #define SYMBOL_STAR "\xe2\xad\x90"
 #define SYMBOL_STAR_GLOWING "\xf0\x9f\x8c\x9f"
+#define SYMBOL_GEM "\xf0\x9f\x92\x8e"
 // games
 #define SYMBOL_DICE "\xf0\x9f\x8e\xb2"
 #define SYMBOL_DIGIT0 "\x30\xe2\x83\xa3"
@@ -83,6 +87,7 @@
 #define SYMBOL_CRICKET_BAT "\xf0\x9f\x8f\x8f"
 
 #define SYMBOL_CREDIT SYMBOL_STAR
+#define SYMBOL_VOUCHER SYMBOL_LOCK_KEY
 
 
 #include "Arduino.h"
@@ -121,11 +126,13 @@ public:
   void MessageCoverStateChange(String chatId=GROUP_CHAT_ID);
   void MessageCoverState(String chatId=GROUP_CHAT_ID);
   void MessageSendEarnedCredits(int creditsEarned, String chatId=GROUP_CHAT_ID);
+  void MessageSendEarnedVouchers(int vouchersEarned, String chatId=GROUP_CHAT_ID);
   void MessageModes(String chatId=GROUP_CHAT_ID);
   void MessageUsers(String chatId=GROUP_CHAT_ID);
   void MessageRoles(String chatId=GROUP_CHAT_ID);
   void MessageChastikeyState(String chatId=GROUP_CHAT_ID);
   void MessageState(String chatId=GROUP_CHAT_ID);
+  void MessageTasks(String chatId=GROUP_CHAT_ID);
   void ShockAction(String durationStr, int count, String fromId, String chatId=GROUP_CHAT_ID);
   void ShockAction(unsigned long milliseconds, int count, String fromId, String chatId=GROUP_CHAT_ID);
   void HolderAction(String fromId, String chatId=GROUP_CHAT_ID);
@@ -151,7 +158,9 @@ public:
   void SetChatDescription(String chatId, String descr);
   unsigned long ReadParamLong(String text, String id);
   void AdoptUserInfos(String text);
+  void ParseSettings(String & descr);
   void AdoptChatDescription();
+  void AdoptSettings();
   void UnknownCommand(String chatId=GROUP_CHAT_ID);
   void WriteCommandsAndSettings();
 };

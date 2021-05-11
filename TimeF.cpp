@@ -124,12 +124,13 @@ int TimeFunctions::GetMinutes()
 // ------------------------------------------------------------------------
 bool TimeFunctions::IsSleepingTime()
 {
-  Serial.println("*** IsSleepingTime()");
+//  Serial.println("*** IsSleepingTime()");
   time_t nowSecs = GetTimeInSeconds();
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
   int hours = (timeinfo.tm_hour + UTC_OFFSET) % 24;
   int sleepingExtension = IsWeekend() ? 3 : 0;
+  /*
   Serial.print("- sleepingExtension: ");
   Serial.println(sleepingExtension);
   Serial.print("- hours: ");
@@ -142,6 +143,7 @@ bool TimeFunctions::IsSleepingTime()
   Serial.print("- now: ");
   Serial.println(GetTimeInSeconds());
   Serial.println(GetTimeString(GetTimeInSeconds()));
+  */
   //
 
   if ((hours < SLEEP_TIME_END_WORKDAYS + sleepingExtension) || (hours >= SLEEP_TIME_BEGIN))
@@ -239,6 +241,7 @@ void TimeFunctions::ProcessSleepTime()
     if (IsSleepingTime() && (! users.GetWearer()->IsSleeping()))
     {
       // Go to sleep
+      message.MessageTasks();
       users.GetWearer()->SetSleeping(true);
       message.SendMessage("Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.");
     }
@@ -247,6 +250,7 @@ void TimeFunctions::ProcessSleepTime()
       // Wake up
       users.GetWearer()->SetSleeping(false);
       message.SendMessage("Good morning "  + users.GetWearer()->GetName() + ", wake up boy!");
+      message.MessageTasks();
     }
   }
 /*

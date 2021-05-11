@@ -66,6 +66,20 @@ bool User::SetRoleId(int r, bool force)
 
 
 // ------------------------------------------------------------------------
+bool User::UpdateRoleId(int r, bool force)
+{
+  Serial.println("*** UpdateRoleId()");
+  // save the current roleId in order to manage the dependent states accordingly
+  int oldRoleId = roleId;
+
+  SetRoleId(r, force);
+
+  if (roleId != oldRoleId)
+    userSet->Update();
+}
+
+
+// ------------------------------------------------------------------------
 bool User::MayBecomeHolder()
 {
   return ((IsTeaser() || IsGuest()) &&
@@ -81,6 +95,17 @@ void User::SetBot(bool is)
   bot.getMe();
   name = bot.GetName();
   roleId = ROLE_SHOCKCELL;
+}
+
+
+// ------------------------------------------------------------------------
+bool UserSet::IdIsHolder(String id)
+{
+  User *u = GetUserFromId(id);
+  if (u)
+    return u->IsHolder();
+  else
+    return false;
 }
 
 
@@ -183,7 +208,7 @@ int UserSet::GetIndexFromId(String id)
   return USER_NONE;
 }
 
- 
+
 // ------------------------------------------------------------------------
 String UserSet::GetUsersInfo()
 {
@@ -198,6 +223,35 @@ String UserSet::GetUsersInfo()
     ++i;
   }
   return info;
+}
+
+
+// ------------------------------------------------------------------------
+void UserSet::Update()
+{
+  int i = 0;
+  String info;
+
+  // clear the indices
+  wearerIndex = USER_NONE;
+  holderIndex = USER_NONE;
+  botIndex = USER_NONE;
+
+  // re-build the indices
+  while (i < USER_CACHE_SIZE)
+  {
+    if (user[i].GetId().length() > 0)
+    {
+      if (user[i].IsWearer())
+	wearerIndex = i;
+      else if (user[i].IsHolder())
+	holderIndex = i;
+      else if (user[i].IsBot())
+	botIndex = i;
+    }
+    ++i;
+  }
+  
 }
 
 
