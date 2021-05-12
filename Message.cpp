@@ -107,6 +107,23 @@ void Message::Init()
 
 
 // ------------------------------------------------------------------------
+void Message::MessageWearerState(String chatId)
+{
+  User *u = users.GetWearer();
+
+  if (u)
+  {
+    if (u->GetRoleId() == ROLE_WEARER_CAPTURED)
+      SendMessage(SYMBOL_LOCK_CLOSED " Wearer is securely captured and has no rights to free himself.", chatId);
+    else if (u->GetRoleId() == ROLE_WEARER_WAITING)
+      SendMessage(SYMBOL_FINGER_UP " Wearer is available to be captured by a holder with command: /holder!!!", chatId);
+    else
+      SendMessage("Wearer is free.", chatId);
+  }
+}
+
+
+// ------------------------------------------------------------------------
 void Message::MessageLastShock(String chatId)
 {
   SendMessage("Last shock was " + timeFunc.Time2String(timeFunc.GetTimeInSeconds() - session.GetTimeOfLastShock()) + " ago.", chatId);
@@ -266,6 +283,7 @@ void Message::MessageChastikeyState(String chatId)
 // ------------------------------------------------------------------------
 void Message::MessageState(String chatId)
 {
+  MessageWearerState(chatId);
   MessageLastShock(chatId);
   MessageCoverState(chatId);
   MessageModes(chatId);
@@ -345,9 +363,13 @@ void Message::ShockAction(unsigned long milliseconds, int count, String fromId, 
 void Message::WaitingAction(String fromId, String chatId)
 {
   String msg;
+  User *u = users.GetUserFromId(fromId);
+
+  if (! u)
+    return;
 
   // does request comes from free wearer?
-  if (users.GetUserFromId(fromId)->IsFreeWearer())
+  if (u->IsFreeWearer())
   {
     users.GetWearer()->UpdateRoleId(ROLE_WEARER_WAITING);
     msg = SYMBOL_WATCHING_EYES " Wearer " + users.GetWearerName() + " is now exposed and waiting to be captured by the holder." COMMON_MSG_WAITING;
@@ -355,13 +377,13 @@ void Message::WaitingAction(String fromId, String chatId)
     WriteCommandsAndSettings();
   }
   // does request comes from waiting wearer?
-  else if (users.GetUserFromId(fromId)->IsWaitingWearer())
+  else if (u->IsWaitingWearer())
   {
     msg = "Wearer " + users.GetWearerName() + " is already waiting for capture by the holder." COMMON_MSG_WAITING;
     SendMessage(msg, chatId);
   }
   // does request comes from captured wearer?
-  else if (users.GetUserFromId(fromId)->IsCapturedWearer())
+  else if (u->IsCapturedWearer())
   {
     msg = "Wearer " + users.GetWearerName() + " is already captured by the holder.";
     SendMessage(msg, chatId);
@@ -639,7 +661,8 @@ void Message::TeaserAction(String fromId, String chatId)
 // ------------------------------------------------------------------------
 void Message::TeasingModeAction(bool mode, String fromId, String chatId)
 {
-  if (users.GetHolder()->GetId() == fromId)
+  Serial.println("*** Message::TeasingModeAction()");
+  if (users.GetHolder() && (users.GetHolder()->GetId() == fromId))
   {
     session.SetTeasingMode(mode);
     if (mode)
