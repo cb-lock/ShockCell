@@ -114,6 +114,13 @@ int UserSet::AddUser(String id, String name, int roleId, bool isBot)
 {
   Serial.println("*** UserSet::AddUser()");
   int i = 0;
+
+  if (id.length() == 0)
+  {
+    Serial.println("- error: empty id string");
+    return USER_NONE;
+  }
+
   while (i < USER_CACHE_SIZE)
   {
     if (user[i].GetId().length() == 0)

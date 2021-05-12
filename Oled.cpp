@@ -99,14 +99,14 @@ void OledDisplay::PrintDisplay(String statusMsg)
 {
   String line[20];
 
-  for (int i = 0; i < 5; i++)
+  for (int i = 0; i < 6; i++)
   {
     if (users.GetUser(i)->GetName().length() > 0)
       line[i] = users.GetUser(i)->GetName() + " (" + users.GetUser(i)->GetRoleStr() + ")";
     else
       line[i] = "";
   }
-  line[5] = statusMsg;
+//  line[5] = statusMsg;
   line[6] = timeFunc.GetTimeString();
 
   Show(line);

@@ -28,6 +28,9 @@
 #define USERS_PREFIX "USERS:"
 #define CHATS_PREFIX "CHATS:"
 
+// general
+#define SYMBOL_WARNING "\xe2\x9a\xa0"
+#define SYMBOL_FINGER_UP "\xe2\x98\x9d"
 // locking
 #define SYMBOL_LOCK_CLOSED "\xf0\x9f\x94\x92"
 #define SYMBOL_LOCK_OPEN "\xf0\x9f\x94\x93"
@@ -120,6 +123,7 @@ public:
   void EditMessage(String msg, String messageId, String chatId);
   int  GetLastSentMessageId();
   void SendRichMessage(String id, String msg);
+  void MessageWearerState(String chatId);
   void MessageLastShock(String chatId);
   void MessageIsClosed(String chatId);
   void MessageIsOpen(String chatId);

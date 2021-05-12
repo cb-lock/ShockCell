@@ -671,7 +671,7 @@ void Session::InfoChastikey()
 {
   String payload;
 
-  Serial.print("*** Session::InfoChastikey()");
+  Serial.println("*** Session::InfoChastikey()");
 /*
   int trial = 0;
   bool success = false;

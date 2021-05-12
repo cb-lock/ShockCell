@@ -144,6 +144,7 @@ void setup()
   message.Init();
   session.InfoChastikey();
   session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
+  //
   session.SetTimeOfLast5sInterval(timeFunc.GetTimeInSeconds());
 }
 
