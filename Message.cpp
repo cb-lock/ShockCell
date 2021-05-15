@@ -32,15 +32,15 @@ UniversalTelegramBot bot(BOT_TOKEN, clientsec);
 
 // Checks for new messages every 1 second.
 
-#define BOT_COMMANDS_GENERAL "/start - Start communication\n/state - Report the cover state\n/roles - List roles\n/users - List users in chat\n/play_6 - Throw dice (any number of possibilities with corresponding number)\n"
-#define BOT_COMMANDS_SHOCKS "/shock_1 - Shock for 1 second (other intervals work with corresponding numbers)\n/shock_5 - Shock for 5 seconds (other intervals work with corresponding numbers)\n/shock_10 - Shock for 10 seconds (other intervals work with corresponding numbers)\n/shock_30 - Shock for 30 seconds (other intervals work with corresponding numbers)\n"
-#define BOT_COMMANDS_RANDOM "/random_5 - Switch on random shock mode with 5 shocks per hour (other intervals work with corresponding numbers)\n/random_off - Switch off random shock mode\n"
+#define BOT_COMMANDS_GENERAL "/start - Start communication\n/menu - Activate the button menu\n/state - Report the session state\n/roles - List and select roles\n/users - List users in chat\n/play_6 - Throw dice (any number of possibilities with corresponding number)\n"
+#define BOT_COMMANDS_SHOCKS "/shock - Electro shock\n"
+#define BOT_COMMANDS_RANDOM "/random - Random shock mode\n"
 #define BOT_COMMANDS_TEASING "/teasing_on - Enable teasing\n/teasing_off - Disable teasing\n/verify_1 - Enable verification mode with 1 check-in per day\n/verify_2 - Enable verification mode with 2 check-ins per day\n/verify_off - Disable verification mode\n"
 #define BOT_COMMANDS_TASKS ""
 #define BOT_COMMANDS_UNLOCK "/unlock - Unlock key safe\n/play4unlock - Throw dice to determine if unlocking should be possible\n"
 #define BOT_COMMANDS_ROLES "/holder - Adopt holder role\n/teaser - Adopt teaser role\n/guest - Adopt guest role\n"
-#define BOT_COMMANDS_WAITING "/waiting - Make wearer waiting to be captured by the holder\n/free - Make wearer free again (stops waiting for capture)\n"
-#define BOT_COMMANDS_CAPTURE "/capture - Capture wearer as a sub\n/release - Release wearer as a sub\n"
+#define BOT_COMMANDS_WAITING ""
+#define BOT_COMMANDS_CAPTURE ""
 #define BOT_COMMANDS_EMERGENCY "/thisisanemergency - Release the wearer in case of an emergency\n"
 
 String botCommandsAll =     BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMANDS_RANDOM BOT_COMMANDS_TEASING                    BOT_COMMANDS_UNLOCK BOT_COMMANDS_ROLES BOT_COMMANDS_WAITING BOT_COMMANDS_CAPTURE ;
@@ -74,7 +74,7 @@ String botCommandsAllHelp = BOT_COMMANDS_GENERAL BOT_COMMANDS_SHOCKS BOT_COMMAND
 
 #define COMMON_MSG_WAITING " The holder can capture him with the /capture command."
 #define COMMON_MSG_CAPTURE " He is now securely locked and lost his permissions to open the key safe. The key safe can only be operated by the holder using the /unlock command.\nFurthermore, the wearer can now be punished with shocks."
-#define COMMON_MSG_TEASING_ON "Teasing mode is activated. Users with teaser role can now support the holder with treatments like /shock_5."
+#define COMMON_MSG_TEASING_ON "Teasing mode is activated. Users with teaser role can now support the holder with shock treatments."
 #define COMMON_MSG_TEASING_OFF "Teasing mode is switched off. Only the holder has the permission to treat the wearer with shocks."
 
 
@@ -303,6 +303,7 @@ void Message::MessageTasks(String chatId)
 // ------------------------------------------------------------------------
 void Message::ShockAction(String durationStr, int count, String fromId, String chatId)
 {
+  Serial.println("*** Message::ShockAction(String)");
   if (timeFunc.IsSleepingTime())
   {
     SendMessage("Wearer " + users.GetWearer()->GetName() + " is allowed to sleep and cannot be shocked now.", chatId);
@@ -311,9 +312,9 @@ void Message::ShockAction(String durationStr, int count, String fromId, String c
   {
     unsigned long milliseconds;
     if (durationStr.length() > 0)
-      milliseconds = durationStr.toInt() * 1000L;
+      milliseconds = durationStr.toInt() * 1000UL;
     else
-      milliseconds = 3000;
+      milliseconds = 3000UL;
 
     ShockAction(milliseconds, count, fromId, chatId);
   }
@@ -323,6 +324,7 @@ void Message::ShockAction(String durationStr, int count, String fromId, String c
 //------------------------------------------------------------------------
 void Message::ShockAction(unsigned long milliseconds, int count, String fromId, String chatId)
 {
+  Serial.println("*** Message::ShockAction(int)");
   User *u = users.GetUserFromId(fromId);
   String msg;
 
@@ -333,7 +335,7 @@ void Message::ShockAction(unsigned long milliseconds, int count, String fromId, 
         (u->IsTeaser() && session.IsTeasingMode()) ||
         (u->IsWearer() && session.IsTeasingMode()))
     {
-      String msg = SYMBOL_COLLISION SYMBOL_COLLISION SYMBOL_COLLISION " Shock processing for " + String((milliseconds / 1000L), DEC) + " s begins...";
+      String msg = SYMBOL_COLLISION SYMBOL_COLLISION SYMBOL_COLLISION " Shock processing for " + String((milliseconds / 1000UL), DEC) + " s begins...";
       SendMessage(msg, chatId);
       SendMessage(msg, USER_ID_WEARER);
       session.SetTimeOfLastShock(timeFunc.GetTimeInSeconds());
@@ -342,7 +344,7 @@ void Message::ShockAction(unsigned long milliseconds, int count, String fromId, 
 
       session.Shock(count, milliseconds);
 
-      msg = "Shock processing completed. :-)";
+      msg = "Shock processing completed. " SYMBOL_DEVIL_SMILE;
       SendMessage(msg, chatId);
       SendMessage(msg, USER_ID_BOT);
       WriteCommandsAndSettings();
@@ -562,13 +564,13 @@ void Message::PlayAction(String max, String fromId, String chatId)
   while (i <= result)
   {
     progress += ".";
-    EditMessage(num[i / 10] + num[i % 10] + " " + progress, String(lastMessageId, DEC), chatId);
+    EditMessage(num[i / 10] + num[i % 10] + " " + progress, chatId, lastMessageId);
     if (maxCount < 10)
       i++;
     else
       i = i + maxCount/10;
   }
-  EditMessage(num[result / 10] + num[result % 10] + " " + SYMBOL_STAR_GLOWING, String(lastMessageId, DEC), chatId);
+  EditMessage(num[result / 10] + num[result % 10] + " " + SYMBOL_STAR_GLOWING, chatId, lastMessageId);
 }
 
 
@@ -591,10 +593,10 @@ void Message::Play4UnlockAction(String fromId, String chatId)
   while (i < result)
   {
     progress += ".";
-    EditMessage(num[i / 10] + num[i % 10] + " " + progress, String(lastMessageId, DEC), chatId);
+    EditMessage(num[i / 10] + num[i % 10] + " " + progress, chatId, lastMessageId);
     i = i + 5;
   }
-  EditMessage(num[result / 10] + num[result % 10] + " " + SYMBOL_STAR_GLOWING, String(lastMessageId, DEC), chatId);
+  EditMessage(num[result / 10] + num[result % 10] + " " + SYMBOL_STAR_GLOWING, chatId, lastMessageId);
   if (result <= winPoints)
     SendMessage(SYMBOL_LOCK_OPEN " Wearer has won! " SYMBOL_SMILY_SMILE SYMBOL_SMILY_SMILE SYMBOL_SMILY_SMILE, chatId);
   else
@@ -955,12 +957,22 @@ void Message::ProcessNewMessages()
 
       users.AddUser(from_id, from_name);
 
-      // execute commands
+      // pre-process the commands
+      if ((text.substring(0, 1) == "/") || (text.substring(0, 1) == "."))
+      {
+        int sPos = text.indexOf(" ");
+        if (sPos > -1)
+          text = text.substring(0, sPos);
+      }
+      Serial.println(String("###> '") + text + "'");
+
+      User *userFrom = users.GetUserFromId(from_id);
+      // execute public commands
       if (text == "/start")
       {
         String welcome = "Welcome, " + from_name + ", use the following commands to control " + users.GetWearer()->GetName() + "'s ShockCell.\n\n";
         welcome += "Commands for the ";
-        switch (users.GetUserFromId(from_id)->GetRoleId())
+        switch (userFrom->GetRoleId())
         {
           case ROLE_WEARER_CAPTURED:
           case ROLE_WEARER_WAITING:
@@ -979,28 +991,56 @@ void Message::ProcessNewMessages()
         }
         SendMessage(welcome, chat_id);
       }
-      else if (text.substring(0, 6) == "/shock")
+      // --- MAIN MENU -----------------------------------------------------------------
+      else if (text.substring(0, 5) == "/menu")
       {
-        if (text[6] == '_')
-          ShockAction(text.substring(7), 1, from_id, chat_id);
-        else
-          ShockAction(text.substring(6), 1, from_id, chat_id);
+        String keyboardJson = "[[\"/state - Session state\", \"/roles - Select role\", \"/users - List users\"]";
+        switch (userFrom->GetRoleId())
+        {
+          case ROLE_HOLDER:
+            keyboardJson += ",[\"/unlock - Unlock safe\"]";
+          case ROLE_TEASER:
+          case ROLE_GUEST:
+          case ROLE_WEARER_CAPTURED:
+          case ROLE_WEARER_WAITING:
+            keyboardJson += ",[\"/shock - Send shock\", \"/random - Setup random shocks\"]";
+          case ROLE_WEARER_FREE:
+            keyboardJson += ",[\"/verify - Verification settings\", \"/game - Play game\"]";
+            break;
+        }
+        keyboardJson += "]";
+        Serial.println(keyboardJson);
+//        keyboardJson = "[[\"/state - Session state\", \"/roles - Select role\", \"/users - List users\"],[\"/shock - Send shock\", \"/random - Setup random shocks\"],[\"/game - Play game\"]]";
+        SendMessageWithKeybaord(chat_id, "Please select the menu option:", keyboardJson);
       }
+      // --- SUB MENU 1 -----------------------------------------------------------------
       else if (text == "/state")
       {
         session.InfoChastikey();
         MessageState(chat_id);
       }
-      else if (text == "/unlock")
-        UnlockAction(from_id, chat_id);
-      else if (text == "/play4unlock")
-        Play4UnlockAction(from_id, chat_id);
-      else if (text.substring(0, 5) == "/play")
-        PlayAction(text.substring(6), from_id, chat_id);
-      else if (text == "/users")
-        MessageUsers(chat_id);
       else if (text == "/roles")
+      {
         MessageRoles(chat_id);
+        String keyboardJson;
+        switch (userFrom->GetRoleId())
+        {
+          case ROLE_HOLDER:
+          case ROLE_TEASER:
+          case ROLE_GUEST:
+            keyboardJson = "[[\"/holder - Full control of the wearer\", \"/teaser - Supportive control of the wearer\"]"
+                           ",[\"." SYMBOL_LOCK_KEY " - Take keys from wearer\", \"." SYMBOL_KEY " - Return keys to wearer\"]"
+                           ",[\"/guest - No control\"]";
+            break;
+          case ROLE_WEARER_CAPTURED:
+          case ROLE_WEARER_WAITING:
+          case ROLE_WEARER_FREE:
+            keyboardJson = "[[\"." SYMBOL_LOCK_KEY " - Offer keys\", \"." SYMBOL_KEY " - Get keys back\"]";
+            break;
+        }
+        keyboardJson += ",[\"/menu - Menu options\"]]";
+        SendMessageWithKeybaord(chat_id, "Please select your new role:", keyboardJson);
+      }
       else if (text == "/holder")
       {
         HolderAction(from_id, chat_id);
@@ -1012,32 +1052,105 @@ void Message::ProcessNewMessages()
           ReleaseAction(from_id, chat_id);
         TeaserAction(from_id, chat_id);
       }
-      else if (text == "/teasing_on")
-        TeasingModeAction(true, from_id, chat_id);
-      else if (text == "/teasing_off")
-        TeasingModeAction(false, from_id, chat_id);
       else if (text == "/guest")
       {
         if (users.IdIsHolder(from_id))
           ReleaseAction(from_id, chat_id);
         GuestAction(from_id, chat_id);
       }
-      else if (text == "/waiting")
-        WaitingAction(from_id, chat_id);
-      else if (text == "/capture")
-        CaptureAction(from_id, chat_id);
-      else if (text == "/release")
-        ReleaseAction(from_id, chat_id);
-      else if (text == "/free")
-        FreeAction(from_id, chat_id);
+      else if (text == "/users")
+        MessageUsers(chat_id);
+      else if (text == "/unlock")
+        UnlockAction(from_id, chat_id);
+      else if (text.substring(0, 6) == "/shock")
+      {
+        String keyboardJson = "[[\"." SYMBOL_COLLISION "1 - shock 1s\", \"." SYMBOL_COLLISION "3 - shock 3s\", \"." SYMBOL_COLLISION "5 - shock 5s\"],"
+                               "[\"." SYMBOL_COLLISION "10 - shock 10s\", \"." SYMBOL_COLLISION "20 - shock 20s\", \"." SYMBOL_COLLISION "40 - shock 40s\"],"
+                               "[\"/menu - Menu options\"]]";
+        SendMessageWithKeybaord(chat_id, "Please select shock punishment duration for one immediate shock:", keyboardJson);
+      }
+      else if (text.substring(0, 7) == "/random")
+      {
+        String keyboardJson = "[[\"." SYMBOL_DIRECT_HIT "1 - 1 shock\", \"." SYMBOL_DIRECT_HIT "2 - 2 shocks\", \"." SYMBOL_DIRECT_HIT "3 - 3 shocks\"],"
+                               "[\"." SYMBOL_DIRECT_HIT "5 - 5 shocks\", \"." SYMBOL_DIRECT_HIT "7 - 7 shocks\", \"." SYMBOL_DIRECT_HIT "10 - 10 shocks\"],"
+                               "[\"." SYMBOL_DIRECT_HIT "off - No random shocks\", \"/menu - Menu options\"]]";
+        SendMessageWithKeybaord(chat_id, "Please select the number of random shocks per hour with random length between 1 and 10 seconds that you want to schedule for the next 3 hours:", keyboardJson);
+      }
+      else if (text.substring(0, 7) == "/verify")
+      {
+        String keyboardJson = "[[\"." SYMBOL_POLICEMAN "1 - 1 verification\", \"." SYMBOL_POLICEMAN "2 - 2 verifications\"],"
+                               "[\"." SYMBOL_POLICEMAN "3 - 3 verifications\", \"." SYMBOL_POLICEMAN "4 - 4 verifications\"],"
+                               "[\"." SYMBOL_POLICEMAN "off - No verifications\", \"/menu - Menu options\"]]";
+        SendMessageWithKeybaord(chat_id, "Please select the number of random verifications to be requested from the wearer daily:", keyboardJson);
+      }
+      else if (text == "/game")
+      {
+        String keyboardJson = "[[\"." SYMBOL_DICE SYMBOL_DICE "6 - Throw dice 1..6\", \"." SYMBOL_DICE SYMBOL_DICE "10 - Dice 1..10\", \"." SYMBOL_DICE SYMBOL_DICE "100 - Dice 1..100\"],"
+                               "[\"." SYMBOL_DICE SYMBOL_LOCK_OPEN " - Play for unlock\"],"
+                               "[\"/menu - Menu options\"]]";
+        SendMessageWithKeybaord(chat_id, "Please select the game that you wish to play:", keyboardJson);
+      }
+
+
+
+
+
+
+      // --- COMMANDS -----------------------------------------------------------------
+      else if (text == "." SYMBOL_LOCK_KEY)
+      {
+        switch (userFrom->GetRoleId())
+        {
+          case ROLE_HOLDER:
+          case ROLE_TEASER:
+          case ROLE_GUEST:
+            CaptureAction(from_id, chat_id);
+            break;
+          case ROLE_WEARER_CAPTURED:
+          case ROLE_WEARER_WAITING:
+          case ROLE_WEARER_FREE:
+            WaitingAction(from_id, chat_id);
+            break;
+        }
+      }
+      else if (text == "." SYMBOL_KEY)
+      {
+        switch (userFrom->GetRoleId())
+        {
+          case ROLE_HOLDER:
+          case ROLE_TEASER:
+          case ROLE_GUEST:
+            ReleaseAction(from_id, chat_id);
+            break;
+          case ROLE_WEARER_CAPTURED:
+          case ROLE_WEARER_WAITING:
+          case ROLE_WEARER_FREE:
+            FreeAction(from_id, chat_id);
+            break;
+        }
+      }
+      else if (text.substring(0, 5) == "." SYMBOL_COLLISION)
+        ShockAction(text.substring(5), 1, from_id, chat_id);
+      else if (text.substring(0, 5) == "." SYMBOL_DIRECT_HIT)
+        RandomShockModeAction(text.substring(5), from_id, chat_id);
+      else if (text.substring(0, 5) == "." SYMBOL_POLICEMAN)
+        VerificationModeAction(text.substring(5), from_id, chat_id);
+      else if (text.substring(0, 9) == "." SYMBOL_DICE SYMBOL_DICE)
+        PlayAction(text.substring(9), from_id, chat_id);
+      else if (text.substring(0, 9) == "." SYMBOL_DICE SYMBOL_LOCK_OPEN)
+        Play4UnlockAction(from_id, chat_id);
+
+
+
+
+      else if (text.substring(0, 5) == "/play")
+        PlayAction(text.substring(6), from_id, chat_id);
+      else if (text == "/teasing_on")
+        TeasingModeAction(true, from_id, chat_id);
+      else if (text == "/teasing_off")
+        TeasingModeAction(false, from_id, chat_id);
       else if (text == "/tasklist")
         MessageTasks();
-      else if (text.substring(0, 7) == "/verify")
-        VerificationModeAction(text.substring(8), from_id, chat_id);
-      else if (text.substring(0, 13) == "/verification")
-        VerificationModeAction(text.substring(14), from_id, chat_id);
-      else if (text.substring(0, 7) == "/random")
-        RandomShockModeAction(text.substring(8), from_id, chat_id);
       //      else if (text == "/restrict")
       //        RestrictUserAction(from_id, chat_id);
       else if (text == "/thisisanemergency")
@@ -1068,7 +1181,7 @@ void Message::SendMessage(String msg, String chatId)
   Serial.print(chatId);
   Serial.print("> ");
   Serial.println(msg);
-  bot.sendMessage(chatId, msg, "");
+  bot.sendMessage(chatId, msg);
 }
 
 
@@ -1082,12 +1195,19 @@ void Message::SendMessageAll(String msg, String chatId)
 
 
 // -------------------------------------------------
-void Message::EditMessage(String msg, String messageId, String chatId)
+void Message::EditMessage(String msg, String chatId, int messageId)
 {
   Serial.print(chatId);
   Serial.print("> ");
   Serial.println(msg);
-  bot.editMessage(chatId, messageId, msg);
+  bot.sendMessage(chatId, msg, PARSE_MODE, messageId);
+}
+
+
+// -------------------------------------------------
+void Message::SendMessageWithKeybaord(String chatId, String message, String keyboardJson)
+{
+   bot.sendMessageWithReplyKeyboard(chatId, message, PARSE_MODE, keyboardJson, RESIZE_KEYBOARD, MULTI_TIME_KEYBOARD, SELECTIVE_KEYBOARD);
 }
 
 
