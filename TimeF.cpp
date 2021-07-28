@@ -203,7 +203,7 @@ bool TimeFunctions::SleepingTimeJustChanged(bool started)
 
 
 // ------------------------------------------------------------------------
-String TimeFunctions::GetTimeString(unsigned long t)
+String TimeFunctions::GetTimeString(bool withDate, unsigned long t)
 {
   time_t nowSecs;
 
@@ -211,12 +211,18 @@ String TimeFunctions::GetTimeString(unsigned long t)
     nowSecs = GetTimeInSeconds();
   else
     nowSecs = t;
+
+  // DST correction
+  nowSecs = nowSecs - dstOffset*3600;
+
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);
-  int hours = (timeinfo.tm_hour + dstOffset) % 24;
 
   char buf[100];
-  sprintf(buf, "%02d:%02d.%02d", hours, timeinfo.tm_min, timeinfo.tm_sec);
+  if (withDate)
+    sprintf(buf, "%02d.%02d.%02d %02d:%02d.%02d", timeinfo.tm_mday, timeinfo.tm_mon+1, timeinfo.tm_year+1900, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+  else
+    sprintf(buf, "%02d:%02d.%02d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
   return String(buf);
 }
 
@@ -262,16 +268,18 @@ void TimeFunctions::ProcessSleepTime()
     if (IsSleepingTime() && (! users.GetWearer()->IsSleeping()))
     {
       // Go to sleep
-      message.MessageTasks();
+//      message.MessageTasks();
       users.GetWearer()->SetSleeping(true);
       message.SendMessage("Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.");
+      message.SendMessage("*** TimeFunctions::ProcessSleepTime(), free heap: " + String(ESP.getFreeHeap(), DEC), WEARER_CHAT_ID);
     }
     if ((! IsSleepingTime()) && users.GetWearer()->IsSleeping())
     {
       // Wake up
       users.GetWearer()->SetSleeping(false);
       message.SendMessage("Good morning "  + users.GetWearer()->GetName() + ", wake up boy!");
-      message.MessageTasks();
+//      message.MessageTasks();
+      message.SendMessage("*** TimeFunctions::ProcessSleepTime(), free heap: " + String(ESP.getFreeHeap(), DEC), WEARER_CHAT_ID);
     }
   }
 /*

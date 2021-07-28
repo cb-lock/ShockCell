@@ -107,7 +107,7 @@ void OledDisplay::PrintDisplay(String statusMsg)
       line[i] = "";
   }
 //  line[5] = statusMsg;
-  line[6] = timeFunc.GetTimeString();
+  line[6] = timeFunc.GetTimeString(NO_DATE);
 
   Show(line);
 }

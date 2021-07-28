@@ -33,7 +33,6 @@
 #include "User.h"
 
 
-
 class Task
 {
 private:
@@ -131,6 +130,7 @@ class Verification
 private:
   VerificationEvent event[MAX_VERIFICATIONS];
   bool enabled = true;
+  bool needsSchedule = true;  // indicates that a new set of verification requests have to be scheduled (for the next day)
   bool dayIsCompleted = false;
   int requiredCountPerDay = 0;
   int currentIndex = 0;
@@ -140,6 +140,8 @@ public:
   void Init();
   bool IsEnabled() { return enabled; }
   void SetEnabled(bool e) { enabled = e; }
+  bool NeedsSchedule() { return needsSchedule; }
+  void SetNeedsSchedule(bool n) { needsSchedule = n; }
   void SetVerificationMode(bool onOff, int count=1);
   // only for settings exchange:
   void SetVerificationModeInt(int mode) { enabled = (mode > 0); requiredCountPerDay = mode; }
@@ -148,7 +150,7 @@ public:
   void SetActualToday(int a);
   int GetActualToday();
   bool IsDayCompleted() { return dayIsCompleted; }
-  void SetDayCompleted(bool i) { dayIsCompleted = i; }
+  void SetDayCompleted(bool i) { dayIsCompleted = i; needsSchedule = true; }
   //
   int GetCurrentIndex() { return currentIndex; }
   void SetCurrentIndex(int c) { currentIndex = c; }

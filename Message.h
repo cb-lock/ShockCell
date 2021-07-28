@@ -27,6 +27,7 @@
 #define FAILURES_TAG "FAIL"
 #define USERS_PREFIX "USERS:"
 #define CHATS_PREFIX "CHATS:"
+#define REFERENCE_PREFIX "REFERENCE:"
 
 // general
 #define SYMBOL_WARNING "\xe2\x9a\xa0"
@@ -177,7 +178,7 @@ public:
   void AdoptChatDescription();
   void AdoptSettings();
   void UnknownCommand(String chatId=GROUP_CHAT_ID);
-  void WriteCommandsAndSettings();
+  void WriteCommandsAndSettings(String reference);
 };
 
 #endif

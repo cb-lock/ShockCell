@@ -164,7 +164,7 @@ void loop()
   {
     oledDisplay.PrintDisplay();
     message.MessageCoverStateChange();
-    message.WriteCommandsAndSettings();
+    message.WriteCommandsAndSettings("loop() coverStateChanged");
     oldCoverState = coverState;
   }
 

@@ -23,6 +23,7 @@ extern Task tasks;
 String Task::GetStatusMessage()
 {
   String statusStr;
+  Serial.println(ESP.getFreeHeap());
   if (IsActive() && (! IsFulfilled()))
   {
     // active task
@@ -45,6 +46,7 @@ String Task::GetStatusMessage()
       // pending task
       statusStr = "pending";
     }
+    Serial.println("  . return");
     return "[" + String(GetIndex(), DEC) + "]  " + GetMessage() + " (" + statusStr + ")\n";
   }
 }
@@ -144,7 +146,7 @@ int Tasklist::Add(String msg, int tType, unsigned long tBegin, unsigned long tEn
 const String Tasklist::GetTaskList()
 {
   String str = "List of open tasks:\n";
-  Serial.println("*** Tasklist::MessageTasks()");
+  Serial.println("*** Tasklist::GetTaskList()");
   for (int i = 0; i < MAX_TASKS; i++)
   {
     Serial.println("- index:" + String(i, DEC));
@@ -219,6 +221,7 @@ void Verification::Init()
     event[i].SetIndex(i);
     event[i].Reset();
   }
+  needsSchedule = true;
 }
 
 
@@ -330,7 +333,7 @@ void Verification::SetVerificationMode(bool onOff, int count)
   SetEnabled(onOff);
   requiredCountPerDay = count;
   Schedule(true);
-  message.WriteCommandsAndSettings();
+  message.WriteCommandsAndSettings("Verification-SetVerificationMode()");
 }
 
 
@@ -347,8 +350,9 @@ void Verification::Schedule(bool force)
   if (IsEnabled())
   {
     Serial.println("- IsEnabled");
-    // schedule new verification events if there is a new day
-    if (force || (timeFunc.GetDayOfWeek() != GetDayOfWeek()))
+    // schedule new verification events at 5:00
+    if (force ||
+        (needsSchedule && (timeFunc.GetHours() == 5)))
     {
       Serial.println("");
       // new day --> update day of week
@@ -390,7 +394,8 @@ void Verification::Schedule(bool force)
         Serial.println("0:");
         break;
       }
-      message.WriteCommandsAndSettings();
+      needsSchedule = false;
+      message.WriteCommandsAndSettings("Verification-Schedule()");
       Print();
     }
   }
@@ -430,7 +435,7 @@ void Verification::CheckIn(String chatId)
       session.SetDeviations(session.GetDeviations() + 1);
       message.SendMessage(SYMBOL_DEVIL_SMILE " Verification is not acceptable. It comes early.", chatId);
     }
-    message.WriteCommandsAndSettings();
+    message.WriteCommandsAndSettings("Verification-CheckIn()");
   }
 }
 
@@ -469,7 +474,7 @@ void Verification::ProcessVerification(String chatId)
           session.SetFailures(session.GetFailures() + 1);
           message.SendMessage(SYMBOL_DEVIL_ANGRY SYMBOL_DEVIL_ANGRY SYMBOL_DEVIL_ANGRY " Verification request has expired!!! Wearer " + users.GetWearer()->GetName() + " has failed to provide a verification in time!", chatId);
           WindowCompleted();
-          message.WriteCommandsAndSettings();
+          message.WriteCommandsAndSettings("Verification-ProcessVerification() verification expired");
         }
       }
     }
@@ -483,7 +488,7 @@ void Verification::ProcessVerification(String chatId)
         message.SendMessage(SYMBOL_DEVIL_SMILE " Verification request - wearer " + users.GetWearer()->GetName() + " must provide a verification showing the verification code " + GetCurrentEvent()->GetCode() + " within " + 
                             timeFunc.Time2String(GetTimeOfNextEnd() - timeFunc.GetTimeInSeconds()) + " from now!", chatId);
         GetCurrentEvent()->SetAnnouncedBegin(true);
-        message.WriteCommandsAndSettings();
+        message.WriteCommandsAndSettings("Verification-ProcessVerification() verification request");
       }
     }
   }
@@ -525,6 +530,7 @@ void Session::Shock(int count, long milliseconds)
 
   int firstBurst = 0;
   long now = timeFunc.GetTimeInSeconds();
+  long delivered = 0;
 
   Serial.print("last shock ago: ");
   Serial.println(now - timeOfLastShock);
@@ -545,8 +551,26 @@ void Session::Shock(int count, long milliseconds)
     delay(200);
 
     digitalWrite(SHOCK_PIN, HIGH);
-    delay(milliseconds + firstBurst);
+    delay(firstBurst);
     digitalWrite(SHOCK_PIN, LOW);
+    delay(50);
+
+    while(milliseconds > delivered)
+    {
+      digitalWrite(SHOCK_PIN, HIGH);
+      if ((milliseconds - delivered) > 10000L)
+      {
+        delay(10000L);
+        delivered += 10000L;
+      }
+      else
+      {
+        delay(milliseconds - delivered);
+        delivered += (milliseconds - delivered);
+      }
+      digitalWrite(SHOCK_PIN, LOW);
+      delay(50);
+    }
 
     delay(SHOCK_BREAK_DURATION);
   }
@@ -804,7 +828,7 @@ int Session::SetRandomMode(bool onOff, int shocksPerHour)
     SetCredits(GetCredits() + creditIncrement);
   }
 
-  message.WriteCommandsAndSettings();
+  message.WriteCommandsAndSettings("Session-SetRandomMode()");
 
   return creditIncrement;
 }

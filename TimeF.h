@@ -3,6 +3,8 @@
 #define __TimeFunctions_h__
 
 #define TIME_MAX 4102444799L
+#define WITH_DATE true
+#define NO_DATE false
 
 #include "Arduino.h"
 
@@ -27,7 +29,7 @@ public:
   unsigned long WakeUpTime();
   unsigned long SleepTime();
   bool SleepingTimeJustChanged(bool started);
-  String GetTimeString(unsigned long t = 0);
+  String GetTimeString(bool withDate, unsigned long t = 0);
   void SetClock();
   void ProcessSleepTime();
 };
