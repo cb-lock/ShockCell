@@ -197,7 +197,7 @@ void Message::MessageModes(String chatId)
   String msg;
   unsigned long lockTimerRemaining = session.GetLockTimerRemaining();
   if (lockTimerRemaining > 0)
-    msg = SYMBOL_CLOCK_3 " Lock timer is set. Key safe cannot be opened before " + timeFunc.GetTimeString(WITH_DATE, session.GetLockTimerEnd());
+    msg = SYMBOL_CLOCK_3 " Lock timer is set to run for "  + timeFunc.Time2String(lockTimerRemaining, IS_DURATION) + ". The key safe cannot be opened before " + timeFunc.GetTimeString(WITH_DATE, session.GetLockTimerEnd());
   else
     msg = "Lock timer is inactive.";
   SendMessage(msg, chatId);
@@ -561,24 +561,36 @@ void Message::LockTimerAction(String durationStr, String fromId, String chatId)
   if (isSubstract)
   {
     Serial.println(" - timerChange: sub " + timerChange);
-    if ((users.GetUserFromId(fromId)->IsHolder()) ||
-        (users.GetUserFromId(fromId)->IsTeaser()))
+// For testing purposes
+//    if ((users.GetUserFromId(fromId)->IsHolder()) ||
+//        (users.GetUserFromId(fromId)->IsTeaser()))
+    if (users.GetUserFromId(fromId)->IsHolder())
     {
       // request is from holder
       session.SubLockTimerEnd(timerChange);
-      SendMessage(SYMBOL_CLOCK_3 " Subtracting " + timeFunc.GetTimeString(NO_DATE, timerChange, IS_RELATIVE) + " from the lock timer. Now, the key safe cannot be opened before " + timeFunc.GetTimeString(WITH_DATE, session.GetLockTimerEnd()) + ".\n", chatId);
+      msg = SYMBOL_CLOCK_3 " Subtracting " + timeFunc.Time2String(timerChange, IS_DURATION) + " from the lock timer. ";
+      if (session.IsLockTimerActive())
+        msg += "New total lock-down time is " + timeFunc.Time2String(session.GetLockTimerRemaining(), IS_DURATION) + ". "
+               "The key safe cannot be opened before " + timeFunc.GetTimeString(WITH_DATE, session.GetLockTimerEnd()) + ".\n";
+     else
+        msg += "Lock-down timer is now cleared. "
+               "The key safe may be unlocked.\n";
     }
     else
     {
-      SendMessage("You have no permission to reduce the lock timer. Only the holder has permission to do this.", chatId);
+      msg = "You have no permission to reduce the lock timer. Only the holder has permission to do this.";
     }
   }
   else
   {
     Serial.println(" - timerChange: add " + timerChange);
-    session.AddLockTimerEnd(timerChange);
-    SendMessage(SYMBOL_CLOCK_3 " Adding " + timeFunc.GetTimeString(NO_DATE, timerChange, IS_RELATIVE) + " to the lock timer. Now, the key safe cannot be opened before " + timeFunc.GetTimeString(WITH_DATE, session.GetLockTimerEnd()) + ".\n", chatId);
+    if (session.AddLockTimerEnd(timerChange))
+      SendMessage(SYMBOL_WARNING " The maximum for the lock-down timer is reached. The timer is limited to 7 days.\n", chatId);
+    msg = SYMBOL_CLOCK_3 " Adding " + timeFunc.Time2String(timerChange, IS_DURATION) + " to the lock timer. "
+          "New total lock-down time is " + timeFunc.Time2String(session.GetLockTimerRemaining(), IS_DURATION) + ". "
+          "The key safe cannot be unlocked before " + timeFunc.GetTimeString(WITH_DATE, session.GetLockTimerEnd()) + ".\n";
   }
+  SendMessage(msg, chatId);
   WriteCommandsAndSettings("Message-LockTimerAction()");
 }
 
@@ -606,17 +618,24 @@ void Message::UnlockAction(String fromId, String chatId, bool force)
   {
     if (force)
       SendMessageAll("An emergency release request has been granted.", chatId);
-    SendMessageAll(SYMBOL_LOCK_OPEN " Key safe is unlocking now for 4 seconds and may be opened during this period.", chatId);
-    session.Unlock();
-    // check state of the safe afterwards
-    coverState = digitalRead(COVER_OPEN_PIN);
-    if (coverState == COVER_OPEN)
+    if (session.IsLockTimerActive())
     {
-      SendMessageAll(SYMBOL_KEY " Key safe has been opened.", chatId);
-      WriteCommandsAndSettings("Message-UnlockAction()");
+      SendMessage(SYMBOL_NO_ENTRY " The lock timer is active! No unlocking possible (the holder may reduce the lock timer to enable unlocking).", chatId);
     }
     else
-      SendMessageAll(SYMBOL_LOCK_CLOSED " Key safe is locked again and has not been opened.", chatId);
+    {
+      SendMessageAll(SYMBOL_LOCK_OPEN " Key safe is unlocking now for 4 seconds and may be opened during this period.", chatId);
+      session.Unlock();
+      // check state of the safe afterwards
+      coverState = digitalRead(COVER_OPEN_PIN);
+      if (coverState == COVER_OPEN)
+      {
+        SendMessageAll(SYMBOL_KEY " Key safe has been opened.", chatId);
+        WriteCommandsAndSettings("Message-UnlockAction()");
+      }
+      else
+        SendMessageAll(SYMBOL_LOCK_CLOSED " Key safe is locked again and has not been opened.", chatId);
+    }
   }
   else
   {
@@ -694,11 +713,18 @@ void Message::HolderAction(String fromId, String chatId)
 
   if (u && u->MayBecomeHolder())
   {
-    u->UpdateRoleId(ROLE_HOLDER);
-    msg = SYMBOL_QUEEN " User " + users.GetUserFromId(fromId)->GetName() + " has now holder permissions.";
-    msg += "The holder can use the following commands:\n" + botCommandsHolder;
-    SendMessage(msg, chatId);
-    WriteCommandsAndSettings("Message-HolderAction()");
+    if (! session.IsLockTimerActive())
+    {
+      u->UpdateRoleId(ROLE_HOLDER);
+      msg = SYMBOL_QUEEN " User " + users.GetUserFromId(fromId)->GetName() + " has now holder permissions.";
+      msg += "The holder can use the following commands:\n" + botCommandsHolder;
+      SendMessage(msg, chatId);
+      WriteCommandsAndSettings("Message-HolderAction()");
+    }
+    else
+    {
+      SendMessage(SYMBOL_NO_ENTRY " The lock timer is active! No one may become holder until the lock timer has expired.", chatId);
+    }
   }
   else
   {

@@ -3,6 +3,7 @@
 #define __TimeFunctions_h__
 
 #define TIME_MAX 4102444799L
+#define IS_DURATION true
 #define WITH_DATE true
 #define NO_DATE false
 #define IS_ABSOLUTE false

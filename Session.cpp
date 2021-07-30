@@ -651,22 +651,31 @@ unsigned long Session::GetLockTimerRemaining()
 
 
 // ------------------------------------------------------------------------
-void Session::AddLockTimerEnd(unsigned long lockTime)
+bool Session::AddLockTimerEnd(unsigned long lockTime)
 {
+  bool limitReached = false;
   // limit extension to 7 days
   if (lockTime > 7*86400L)
+  {
     lockTime = 7*86400L;
+    limitReached = true;
+  }
 
   if (IsLockTimerActive())
   {
     // lock timer may not exceed 7 days
     if ((GetLockTimerEnd() + lockTime) > (timeFunc.GetTimeInSeconds() + 7*86400L))
+    {
       SetLockTimerEnd(timeFunc.GetTimeInSeconds() + 7*86400L);
+      limitReached = true;
+    }
     else
       SetLockTimerEnd(GetLockTimerEnd() + lockTime);
   }
   else
     SetLockTimerEnd(timeFunc.GetTimeInSeconds() + lockTime);
+
+  return limitReached;
 }
 
 

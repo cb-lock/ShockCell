@@ -247,7 +247,7 @@ public:
 
   unsigned long GetLockTimerEnd() { return lockTimerEnd; }
   void SetLockTimerEnd(unsigned long l) { lockTimerEnd = l; }
-  void AddLockTimerEnd(unsigned long l);
+  bool AddLockTimerEnd(unsigned long l);
   void SubLockTimerEnd(unsigned long l);
   unsigned long GetLockTimerRemaining();
   bool IsLockTimerActive() { return (GetLockTimerRemaining() > 0); }
