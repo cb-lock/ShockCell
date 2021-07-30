@@ -205,6 +205,8 @@ private:
   unsigned long timeOfLast5sInterval = 0;
   unsigned long timeOfLast1minInterval = 0;
   unsigned long timeOfLast5minInterval = 0;
+  unsigned long lockTimerEnd = 0;
+  bool lockTimerWasActive = false;
 
 public:
   Session() {}
@@ -242,6 +244,13 @@ public:
 
   unsigned long GetTimeOfRandomModeStart() { return timeOfRandomModeStart; }
   void SetTimeOfRandomModeStart(unsigned long t) { timeOfRandomModeStart = t; }
+
+  unsigned long GetLockTimerEnd() { return lockTimerEnd; }
+  void SetLockTimerEnd(unsigned long l) { lockTimerEnd = l; }
+  void AddLockTimerEnd(unsigned long l);
+  void SubLockTimerEnd(unsigned long l);
+  unsigned long GetLockTimerRemaining();
+  bool IsLockTimerActive() { return (GetLockTimerRemaining() > 0); }
 
   void SetTimeOfLast5sInterval(unsigned long setTime) { timeOfLast5sInterval = setTime; }
   unsigned long GetTimeOfLast5sInterval() { return timeOfLast5sInterval; }

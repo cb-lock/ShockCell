@@ -9,6 +9,7 @@
 #define LAST_CLOSING_TAG "LACL"
 #define LAST_SHOCK_TAG "LASH"
 //#define LAST_SHOCK_TAG "LastShock"
+#define LOCK_TIMER_END_TAG "LOTE"
 #define RANDOM_MODE_START_TAG "RAMS"
 //#define RANDOM_MODE_START_TAG "RandomModeStart"
 #define NEXT_VERIFICATION_BEGIN_TAG "VSTA"
@@ -159,6 +160,7 @@ public:
   void FreeAction(String fromId, String chatId=GROUP_CHAT_ID);
   void CaptureAction(String fromId, String chatId=GROUP_CHAT_ID);
   void UnlockAction(String fromId, String chatId=GROUP_CHAT_ID, bool force=false);
+  void LockTimerAction(String durationStr, String fromId, String chatId);
   void Play4UnlockAction(String fromId, String chatId=GROUP_CHAT_ID);
   void PlayAction(String max, String fromId, String chatId=GROUP_CHAT_ID);
   void ReleaseAction(String fromId, String chatId=GROUP_CHAT_ID);

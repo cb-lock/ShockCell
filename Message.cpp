@@ -195,6 +195,13 @@ void Message::MessageSendEarnedVouchers(int vouchersEarned, String chatId)
 void Message::MessageModes(String chatId)
 {
   String msg;
+  unsigned long lockTimerRemaining = session.GetLockTimerRemaining();
+  if (lockTimerRemaining > 0)
+    msg = SYMBOL_CLOCK_3 " Lock timer is set. Key safe cannot be opened before " + timeFunc.GetTimeString(WITH_DATE, session.GetLockTimerEnd());
+  else
+    msg = "Lock timer is inactive.";
+  SendMessage(msg, chatId);
+
   if (session.IsTeasingMode())
     msg = COMMON_MSG_TEASING_ON;
   else
@@ -517,6 +524,62 @@ void Message::ReleaseAction(String fromId, String chatId)
     else
       SendMessage("You currently have no permission to release the wearer. Only the holder may release the wearer.", chatId);
   }
+}
+
+
+// ------------------------------------------------------------------------
+void Message::LockTimerAction(String durationStr, String fromId, String chatId)
+{
+  String msg;
+  unsigned long timerChange = 0;
+  bool isSubstract = (durationStr[0] == '-');
+
+  Serial.println("*** Message::LockTimerAction(String)");
+  Serial.println(" - durationStr: " + durationStr);
+  durationStr = durationStr.substring(1);
+  const char timerUnit = durationStr[durationStr.length() - 1];
+  durationStr = durationStr.substring(0, durationStr.length() - 1);
+  switch (timerUnit)
+  {
+    case 'm':
+      Serial.println(" - minutes");
+      timerChange = durationStr.toInt() * 60;
+      break;
+    case 'h':
+      Serial.println(" - hours");
+      timerChange = durationStr.toInt() * 3600;
+      break;
+    case 'd':
+      Serial.println(" - days");
+      timerChange = durationStr.toInt() * 86400;
+      break;
+    default:
+      timerChange = durationStr.toInt();
+      break;
+  }
+
+  if (isSubstract)
+  {
+    Serial.println(" - timerChange: sub " + timerChange);
+    if ((users.GetUserFromId(fromId)->IsHolder()) ||
+        (users.GetUserFromId(fromId)->IsTeaser()))
+    {
+      // request is from holder
+      session.SubLockTimerEnd(timerChange);
+      SendMessage(SYMBOL_CLOCK_3 " Subtracting " + timeFunc.GetTimeString(NO_DATE, timerChange, IS_RELATIVE) + " from the lock timer. Now, the key safe cannot be opened before " + timeFunc.GetTimeString(WITH_DATE, session.GetLockTimerEnd()) + ".\n", chatId);
+    }
+    else
+    {
+      SendMessage("You have no permission to reduce the lock timer. Only the holder has permission to do this.", chatId);
+    }
+  }
+  else
+  {
+    Serial.println(" - timerChange: add " + timerChange);
+    session.AddLockTimerEnd(timerChange);
+    SendMessage(SYMBOL_CLOCK_3 " Adding " + timeFunc.GetTimeString(NO_DATE, timerChange, IS_RELATIVE) + " to the lock timer. Now, the key safe cannot be opened before " + timeFunc.GetTimeString(WITH_DATE, session.GetLockTimerEnd()) + ".\n", chatId);
+  }
+  WriteCommandsAndSettings("Message-LockTimerAction()");
 }
 
 
@@ -1022,7 +1085,7 @@ void Message::ProcessNewMessages()
           case ROLE_GUEST:
           case ROLE_WEARER_CAPTURED:
           case ROLE_WEARER_WAITING:
-            keyboardJson += ",[\"/shock - Send shock\", \"/random - Setup random shocks\"]";
+            keyboardJson += ",[\"/shock - Send shock\", \"/random - Setup random shocks\", \"/lock - Lock timer\"]";
           case ROLE_WEARER_FREE:
             keyboardJson += ",[\"/verify - Verification settings\", \"/game - Play game\"]";
             break;
@@ -1102,6 +1165,13 @@ void Message::ProcessNewMessages()
                                "[\"." SYMBOL_POLICEMAN "off - No verifications\", \"/menu - Menu options\"]]";
         SendMessageWithKeybaord(chat_id, "Please select the number of random verifications to be requested from the wearer daily:", keyboardJson);
       }
+      else if (text.substring(0, 5) == "/lock")
+      {
+        String keyboardJson = "[[\"." SYMBOL_CLOCK_3 "+10m - lock +10m\", \"." SYMBOL_CLOCK_3 "+1h - lock +1h\", \"." SYMBOL_CLOCK_3 "+1d - lock +1d\"],"
+                               "[\"." SYMBOL_CLOCK_3 "-10m - lock -10m\", \"." SYMBOL_CLOCK_3 "-1h - lock -1h\", \"." SYMBOL_CLOCK_3 "-1d - lock -1d\"],"
+                               "[\"/menu - Menu options\"]]";
+        SendMessageWithKeybaord(chat_id, "Please select the time to add/subtract keeping the safe secured against any unlocking:", keyboardJson);
+      }
       else if (text == "/game")
       {
         String keyboardJson = "[[\"." SYMBOL_DICE SYMBOL_DICE "6 - Throw dice 1..6\", \"." SYMBOL_DICE SYMBOL_DICE "10 - Dice 1..10\", \"." SYMBOL_DICE SYMBOL_DICE "100 - Dice 1..100\"],"
@@ -1154,6 +1224,8 @@ void Message::ProcessNewMessages()
         RandomShockModeAction(text.substring(5), from_id, chat_id);
       else if (text.substring(0, 5) == "." SYMBOL_POLICEMAN)
         VerificationModeAction(text.substring(5), from_id, chat_id);
+      else if (text.substring(0, 5) == "." SYMBOL_CLOCK_3)
+        LockTimerAction(text.substring(5), from_id, chat_id);
       else if (text.substring(0, 9) == "." SYMBOL_DICE SYMBOL_DICE)
         PlayAction(text.substring(9), from_id, chat_id);
       else if (text.substring(0, 9) == "." SYMBOL_DICE SYMBOL_LOCK_OPEN)
@@ -1430,6 +1502,8 @@ void Message::AdoptSettings()
     session.SetTimeOfLastOpening(ReadParamLong(descr, LAST_OPENING_TAG));
     session.SetTimeOfLastClosing(ReadParamLong(descr, LAST_CLOSING_TAG));
     session.SetTimeOfLastShock(ReadParamLong(descr, LAST_SHOCK_TAG));
+    unsigned int loTi = ReadParamLong(descr, LOCK_TIMER_END_TAG);
+    session.SetLockTimerEnd((loTi > 0) ? loTi : timeFunc.GetTimeInSeconds());
     session.SetTimeOfRandomModeStart(ReadParamLong(descr, RANDOM_MODE_START_TAG));
     verification.Reset();
     verification.SetVerificationModeInt(ReadParamLong(descr, VERIFICATION_MODE_TAG));
@@ -1532,6 +1606,7 @@ void Message::WriteCommandsAndSettings(String reference)
               LAST_OPENING_TAG ":" + String(session.GetTimeOfLastOpening(), DEC) + "; "
               LAST_CLOSING_TAG ":" + String(session.GetTimeOfLastClosing(), DEC) + "; "
               LAST_SHOCK_TAG ":" + String(session.GetTimeOfLastShock(), DEC) + "; "
+              LOCK_TIMER_END_TAG ":" + String(session.GetLockTimerEnd(), DEC) + "; "
               RANDOM_MODE_START_TAG ":" + String(session.GetTimeOfRandomModeStart(), DEC) + "; "
               "\"},";
   commands += "{\"command\":\"_verification\",\"description\":\"";

@@ -203,7 +203,7 @@ bool TimeFunctions::SleepingTimeJustChanged(bool started)
 
 
 // ------------------------------------------------------------------------
-String TimeFunctions::GetTimeString(bool withDate, unsigned long t)
+String TimeFunctions::GetTimeString(bool withDate, unsigned long t, bool isRelative)
 {
   time_t nowSecs;
 
@@ -213,7 +213,8 @@ String TimeFunctions::GetTimeString(bool withDate, unsigned long t)
     nowSecs = t;
 
   // DST correction
-  nowSecs = nowSecs - dstOffset*3600;
+  if (! isRelative)
+    nowSecs = nowSecs + dstOffset*3600;
 
   struct tm timeinfo;
   gmtime_r(&nowSecs, &timeinfo);

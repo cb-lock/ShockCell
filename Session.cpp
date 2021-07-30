@@ -641,6 +641,52 @@ unsigned long Session::GetRemainingTime(bool forDisplay)
 
 
 // ------------------------------------------------------------------------
+unsigned long Session::GetLockTimerRemaining()
+{
+  if (timeFunc.GetTimeInSeconds() > lockTimerEnd)
+    return 0;
+  else
+    return lockTimerEnd - timeFunc.GetTimeInSeconds();
+}
+
+
+// ------------------------------------------------------------------------
+void Session::AddLockTimerEnd(unsigned long lockTime)
+{
+  // limit extension to 7 days
+  if (lockTime > 7*86400L)
+    lockTime = 7*86400L;
+
+  if (IsLockTimerActive())
+  {
+    // lock timer may not exceed 7 days
+    if ((GetLockTimerEnd() + lockTime) > (timeFunc.GetTimeInSeconds() + 7*86400L))
+      SetLockTimerEnd(timeFunc.GetTimeInSeconds() + 7*86400L);
+    else
+      SetLockTimerEnd(GetLockTimerEnd() + lockTime);
+  }
+  else
+    SetLockTimerEnd(timeFunc.GetTimeInSeconds() + lockTime);
+}
+
+
+// ------------------------------------------------------------------------
+void Session::SubLockTimerEnd(unsigned long lockTime)
+{
+  if (IsLockTimerActive())
+  {
+    if (GetLockTimerEnd() > lockTime)
+      SetLockTimerEnd(GetLockTimerEnd() - lockTime);
+    else
+      // we want the lockTimerEnd to be set to the current time if cleared to avoid underrun issues
+      SetLockTimerEnd(timeFunc.GetTimeInSeconds());
+  }
+  else
+    SetLockTimerEnd(timeFunc.GetTimeInSeconds() - lockTime);
+}
+
+
+// ------------------------------------------------------------------------
 void Session::SetCredits(int newVal, String chatId)
 {
   int creditCount = GetCredits();
