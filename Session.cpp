@@ -497,18 +497,18 @@ void Verification::ProcessVerification(String chatId)
 
 
 // ------------------------------------------------------------------------
-void Session::Shock(int count, long milliseconds)
+void Session::Shock(int count, long milliseconds, int level)
 {
   Serial.print("*** Shock() milliseconds=");
   Serial.print(milliseconds);
   Serial.print(", count=");
   Serial.print(count);
-  String prefix = "#=" + String(count, DEC) + " t=" + String((milliseconds / 1000), DEC);
+  String prefix = "#=" + String(count, DEC) + " t=" + String((milliseconds / 1000), DEC) + " l=" + String(level, DEC);
 
   // IFTTT webhook handling
   {
     String payload;
-    String request = "value1=" + String(count, DEC) + "&value2=" + String(milliseconds, DEC) + "&value3=Telegram";
+    String request = "value1=" + String(count, DEC) + "&value2=" + String(milliseconds, DEC) + "," + String(level, DEC) + "&value3=Telegram";
     Serial.print("*** IFTTT webhook");
     Serial.println(request);
 
@@ -537,6 +537,40 @@ void Session::Shock(int count, long milliseconds)
   if ((now - timeOfLastShock) > 250)
     firstBurst = 2500;
 
+  int shockPin = SHOCK_PIN;
+  bool turnOn, turnOff;
+  level = 10;
+  if (level < 20)
+  {
+    shockPin = SHOCK1_PIN;
+    turnOn = LOW;
+    turnOff = HIGH;
+  }
+  else if (level < 40)
+  {
+    shockPin = SHOCK_PIN;
+    turnOn = HIGH;
+    turnOff = LOW;
+  }
+  else if (level < 40)
+  {
+    shockPin = SHOCK2_PIN;
+    turnOn = LOW;
+    turnOff = HIGH;
+  }
+  else if (level < 40)
+  {
+    shockPin = SHOCK3_PIN;
+    turnOn = LOW;
+    turnOff = HIGH;
+  }
+  else
+  {
+    shockPin = SHOCK4_PIN;
+    turnOn = LOW;
+    turnOff = HIGH;
+  }
+
   for (int i = 0; i < count; i++)
   {
     Serial.println("*** Shock processing: ");
@@ -545,19 +579,19 @@ void Session::Shock(int count, long milliseconds)
     Serial.print(milliseconds);
     Serial.println(" ms");
 
-    digitalWrite(SHOCK_PIN, HIGH);
+    digitalWrite(shockPin, turnOn);
     delay(100);
-    digitalWrite(SHOCK_PIN, LOW);
+    digitalWrite(shockPin, turnOff);
     delay(200);
 
-    digitalWrite(SHOCK_PIN, HIGH);
+    digitalWrite(shockPin, turnOn);
     delay(firstBurst);
-    digitalWrite(SHOCK_PIN, LOW);
+    digitalWrite(shockPin, turnOff);
     delay(50);
 
     while(milliseconds > delivered)
     {
-      digitalWrite(SHOCK_PIN, HIGH);
+      digitalWrite(shockPin, turnOn);
       if ((milliseconds - delivered) > 10000L)
       {
         delay(10000L);
@@ -568,7 +602,7 @@ void Session::Shock(int count, long milliseconds)
         delay(milliseconds - delivered);
         delivered += (milliseconds - delivered);
       }
-      digitalWrite(SHOCK_PIN, LOW);
+      digitalWrite(shockPin, turnOff);
       delay(50);
     }
 
@@ -695,6 +729,7 @@ void Session::SubLockTimerEnd(unsigned long lockTime)
 }
 
 
+/*
 // ------------------------------------------------------------------------
 void Session::SetCredits(int newVal, String chatId)
 {
@@ -736,6 +771,7 @@ void Session::SetVouchers(int newVal, String chatId)
   if (GetVouchers() > voucherCount)
     message.SendMessage(String(SYMBOL_VOUCHER) + " Wearer received " + (GetVouchers() > voucherCount) + " unlock vouchers.", chatId);
 }
+*/
 
 
 // ------------------------------------------------------------------------
@@ -810,7 +846,7 @@ void Session::InfoChastikey()
 // ------------------------------------------------------------------------
 void Session::Punishment(int level)
 {
-  message.SendMessage("Wearer " + users.GetWearer()->GetName() + "needs to be punished.", chatId);
+  message.SendMessage("Wearer " + users.GetWearer()->GetName() + "needs to be treated.", chatId);
   unsigned long rnd = random(10000);
   switch (rnd * level / 10000)
   {
@@ -859,7 +895,7 @@ int Session::SetRandomMode(bool onOff, int shocksPerHour)
   unsigned long now = timeFunc.GetTimeInSeconds();
   unsigned long duration = now - GetTimeOfRandomModeStart();
   // credit is given for each hours minus 5 seconds in order to prevent small deviations from the 1 hour duration
-  int creditIncrement = duration / 3595;
+//  int creditIncrement = duration / 3595;
   bool oldRandomShockMode = randomShockMode;
   randomShockMode = onOff;
 
@@ -878,14 +914,15 @@ int Session::SetRandomMode(bool onOff, int shocksPerHour)
   else if (oldRandomShockMode)
   {
     // if randomShockMode is switched off, but oldRandomShockMode was on...
-    Serial.print("- credit increment: ");
-    Serial.println(creditIncrement);
-    SetCredits(GetCredits() + creditIncrement);
+//    Serial.print("- credit increment: ");
+//    Serial.println(creditIncrement);
+//    SetCredits(GetCredits() + creditIncrement);
   }
 
   message.WriteCommandsAndSettings("Session-SetRandomMode()");
 
-  return creditIncrement;
+//  return creditIncrement;
+  return 0;
 }
 
 

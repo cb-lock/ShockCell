@@ -9,6 +9,7 @@
 #include "HTTPSP.h"
 //#include <WiFiClientSecure.h>
 //#include <StreamString.h>
+#include <ESP32Ping.h>
 #include "EServer.h"
 #include "Defs.h"
 #include "Oled.h"
@@ -366,6 +367,14 @@ String EmlaServer::UrlEncode(const char *src)
 
   Serial.println(d);
   return String(d);
+}
+
+
+// ------------------------------------------------------------------------
+bool ePing(const char *hostname)
+{
+  bool success = Ping.ping("192.168.1.67", 10);
+  return success;
 }
 
 //

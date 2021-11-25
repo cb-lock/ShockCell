@@ -102,8 +102,8 @@ public:
   bool MayUnlock() { return (IsFreeWearer() || IsWaitingWearer() || IsHolder()); }
   bool IsSleeping() { return sleeping; }
   void SetSleeping(bool s) { sleeping = s; }
-  unsigned long LastMessageTime() { return lastMessageTime; }
-  void SetLastMessageTime(unsigned int now) { lastMessageTime = now; }
+  unsigned long GetLastMessageTime() { return lastMessageTime; }
+  void SetLastMessageTime(unsigned int now=0);
 };
 
 
@@ -116,7 +116,7 @@ protected:
   int holderIndex;
   int botIndex;
   User user[USER_CACHE_SIZE];
-  unsigned long lastMessageTime;
+//  unsigned long lastMessageTime;
 
 public:
   UserSet() : count(0), wearerIndex(-1), holderIndex(-1), botIndex(-1) {}
@@ -138,8 +138,8 @@ public:
   bool IdIsHolder(String id);
   void SetBotIndex(int i) { botIndex = i; }
   int AddUser(String id, String name="", int role=ROLE_GUEST, bool isBot=false);
-  unsigned long LastMessageTime() { return lastMessageTime; }
-  void SetLastMessageTime(unsigned long now) { lastMessageTime = now; }
+//  unsigned long GetLastMessageTime() { return lastMessageTime; }
+//  void SetLastMessageTime(unsigned long now) { lastMessageTime = now; }
   String GetUsersInfo();
   void Update();
 };

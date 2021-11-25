@@ -70,6 +70,14 @@ void setup()
 
   // Pins
   pinMode(SHOCK_PIN, OUTPUT);
+  pinMode(SHOCK1_PIN, OUTPUT);
+  digitalWrite(SHOCK1_PIN, HIGH);
+  pinMode(SHOCK2_PIN, OUTPUT);
+  digitalWrite(SHOCK2_PIN, HIGH);
+  pinMode(SHOCK3_PIN, OUTPUT);
+  digitalWrite(SHOCK3_PIN, HIGH);
+  pinMode(SHOCK4_PIN, OUTPUT);
+  digitalWrite(SHOCK4_PIN, HIGH);
   // pin controlling the cover state
   pinMode(COVER_OPEN_PIN, INPUT_PULLUP);
 
@@ -185,6 +193,25 @@ void loop()
   // every 1 minute
   if (timeFunc.GetTimeInSeconds() >= (session.GetTimeOfLast1minInterval() + 60))
   {
+    if (ePing(""))
+    {
+      // Wearer is at home
+      if (session.GetAwayCounter() > AWAY_LIMIT)
+      {
+        message.SendMessage("Wearer returned home.", GROUP_CHAT_ID);
+        message.WriteCommandsAndSettings("loop() Wearer returned home");
+      }
+      session.SetAwayCounter(0);
+    }
+    else
+    {
+      // Wearer cannot be reached
+      if (session.GetAwayCounter() == AWAY_LIMIT)
+        message.SendMessage("Wearer is away from home since " + String(AWAY_LIMIT, DEC) + " minutes.", GROUP_CHAT_ID);
+      if (session.GetAwayCounter() == (AWAY_LIMIT + 1))
+        message.WriteCommandsAndSettings("loop() Wearer is away");
+      session.SetAwayCounter(session.GetAwayCounter() + 1);
+    }
     verification.ProcessVerification(GROUP_CHAT_ID);
     timeFunc.ProcessSleepTime();
     // this method calls tasklist.ProcessTasks() in the morning and evening
@@ -202,9 +229,13 @@ void loop()
     {
       session.SetEmergencyReleaseCounter(session.GetEmergencyReleaseCounter() + 1);
       if (session.GetEmergencyReleaseCounter() < 2)
-        message.SendMessageAll("The first emergency release request has been accepted, but it needs to be raised again for confirmation.");
+        message.SendMessageAll("The first emergency release request has been accepted, but it needs to be raised again for confirmation. If the second request is raised successfully, the safe will be unlocked and the holder role will be removed.");
       else
+      {
         message.UnlockAction(users.GetWearer()->GetId(), GROUP_CHAT_ID, FORCE);
+        message.GuestAction(users.GetHolder()->GetId(), GROUP_CHAT_ID, FORCE);
+        session.SetEmergencyReleaseCounterRequest(false);
+      }
     }
     else
     {

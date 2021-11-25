@@ -12,6 +12,9 @@
 #include "Oled.h"
 
 
+bool ePing(const char *hostname);
+
+
 class EmlaServer
 {
 private:

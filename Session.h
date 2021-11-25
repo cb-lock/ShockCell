@@ -184,12 +184,14 @@ private:
   bool ramdomShockOffMessage10 = false;
   unsigned long randomShocksPerHour = 1;
   bool teasingMode = true;
-  int credits = 0;
-  int unlockVouchers = 0;
-  int creditFractions = 0;
+  unsigned long awayCounter = 0;
+//  int credits = 0;
+//  int unlockVouchers = 0;
+//  int creditFractions = 0;
   int deviations = 0;
   int failures = 0;
   String chastikeyHolder;
+  unsigned int wearerPresence = 0;
   unsigned long endTime;
   String endTimeStr;
   bool elapsedTimeDisplay;
@@ -277,6 +279,7 @@ public:
   void SetRandomModeInt(int mode) { randomShockMode = (mode > 0); randomShocksPerHour = mode; }
   int GetRandomModeInt() { return randomShockMode ? randomShocksPerHour : 0; }
 
+/*
   void SetVouchers(int newVal) { unlockVouchers = newVal; }
   void SetVouchers(int newVal, String chatId);
   int GetVouchers() { return unlockVouchers; }
@@ -286,6 +289,9 @@ public:
   void SetCreditFractions(int newVal);
   void SetCreditFractions(int newVal, String chatId);
   int GetCreditFractions() { return creditFractions; }
+*/
+  void SetAwayCounter(unsigned long newVal) { awayCounter = newVal; }
+  unsigned long GetAwayCounter() { return awayCounter; }
   void SetDeviations(int newVal) { deviations = newVal; }
   int GetDeviations() { return deviations; }
   void SetFailures(int newVal) { failures = newVal; }
@@ -293,11 +299,11 @@ public:
 
   void SetEmergencyReleaseCounter(int newVal) { emergencyReleaseCounter = newVal; emergencyReleaseCounterRequest = false; }
   int GetEmergencyReleaseCounter() { return emergencyReleaseCounter; }
-  void SetEmergencyReleaseCounterRequest(bool req) { emergencyReleaseCounterRequest = req; }
+  void SetEmergencyReleaseCounterRequest(bool req) { emergencyReleaseCounterRequest = req; if (! req) emergencyReleaseCounter = 0; }
   bool GetEmergencyReleaseCounterRequest() { return emergencyReleaseCounterRequest; }
 
   void Punishment(int level);
-  void Shock(int count, long milliseconds);
+  void Shock(int count, long milliseconds, int level=30);
   void Lock();
   void ForcedUnlock();
   void Unlock();

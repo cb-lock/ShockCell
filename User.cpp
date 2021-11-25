@@ -80,6 +80,19 @@ bool User::UpdateRoleId(int r, bool force)
 
 
 // ------------------------------------------------------------------------
+void User::SetLastMessageTime(unsigned int now)
+{
+  Serial.println("*** SetLastMessageTime(" + String(now, DEC) + ")");
+  Serial.println("- before: " + GetName() + " (" + GetRoleStr() + ") [" + timeFunc.GetTimeString(WITH_DATE, GetLastMessageTime()) + "]");
+  if (now == 0)
+    lastMessageTime = timeFunc.GetTimeInSeconds();
+  else
+    lastMessageTime = now;
+  Serial.println("- after: " + GetName() + " (" + GetRoleStr() + ") [" + timeFunc.GetTimeString(WITH_DATE, GetLastMessageTime()) + "]");
+}
+
+
+// ------------------------------------------------------------------------
 bool User::MayBecomeHolder()
 {
   return ((IsTeaser() || IsGuest()) &&

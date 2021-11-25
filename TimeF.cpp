@@ -271,14 +271,14 @@ void TimeFunctions::ProcessSleepTime()
       // Go to sleep
 //      message.MessageTasks();
       users.GetWearer()->SetSleeping(true);
-      message.SendMessage("Good night "  + users.GetWearer()->GetName() + ", sleep well and frustrated.");
+      message.SendMessage("Good night "  + users.GetWearer()->GetName() + " boi. Sleep well and frustrated.");
       message.SendMessage("*** TimeFunctions::ProcessSleepTime(), free heap: " + String(ESP.getFreeHeap(), DEC), WEARER_CHAT_ID);
     }
     if ((! IsSleepingTime()) && users.GetWearer()->IsSleeping())
     {
       // Wake up
       users.GetWearer()->SetSleeping(false);
-      message.SendMessage("Good morning "  + users.GetWearer()->GetName() + ", wake up boy!");
+      message.SendMessage("Good morning "  + users.GetWearer()->GetName() + " boi. Time to wake up!");
 //      message.MessageTasks();
       message.SendMessage("*** TimeFunctions::ProcessSleepTime(), free heap: " + String(ESP.getFreeHeap(), DEC), WEARER_CHAT_ID);
     }

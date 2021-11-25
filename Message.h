@@ -26,9 +26,12 @@
 #define VOUCHER_TAG "VOUC"
 #define DEVIATIONS_TAG "DEVN"
 #define FAILURES_TAG "FAIL"
+#define SWVERSION_TAG "SWVERSION"
 #define USERS_PREFIX "USERS:"
 #define CHATS_PREFIX "CHATS:"
 #define REFERENCE_PREFIX "REFERENCE:"
+#define AWAY_TAG "AWAY:"
+#define IPADDRESS_TAG "IPCLIENT:"
 
 // general
 #define SYMBOL_WARNING "\xe2\x9a\xa0"
@@ -142,7 +145,7 @@ public:
   void MessageIsOpen(String chatId);
   void MessageCoverStateChange(String chatId=GROUP_CHAT_ID);
   void MessageCoverState(String chatId=GROUP_CHAT_ID);
-  void MessageSendEarnedCredits(int creditsEarned, String chatId=GROUP_CHAT_ID);
+//  void MessageSendEarnedCredits(int creditsEarned, String chatId=GROUP_CHAT_ID);
   void MessageSendEarnedVouchers(int vouchersEarned, String chatId=GROUP_CHAT_ID);
   void MessageModes(String chatId=GROUP_CHAT_ID);
   void MessageUsers(String chatId=GROUP_CHAT_ID);
@@ -155,7 +158,7 @@ public:
   void HolderAction(String fromId, String chatId=GROUP_CHAT_ID);
   void TeaserAction(String fromId, String chatId=GROUP_CHAT_ID);
   void TeasingModeAction(bool mode, String fromId, String chatId=GROUP_CHAT_ID);
-  void GuestAction(String fromId, String chatId=GROUP_CHAT_ID);
+  void GuestAction(String fromId, String chatId=GROUP_CHAT_ID, bool force=false);
   void WaitingAction(String fromId, String chatId=GROUP_CHAT_ID);
   void FreeAction(String fromId, String chatId=GROUP_CHAT_ID);
   void CaptureAction(String fromId, String chatId=GROUP_CHAT_ID);
