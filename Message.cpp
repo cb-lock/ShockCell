@@ -124,7 +124,10 @@ void Message::MessageWearerState(String chatId)
     else
       SendMessage("Wearer is free.", chatId);
 
-    SendMessage("Wearer has been last seen at home " + String(session.GetAwayCounter(), DEC) + " minutes ago.", chatId);
+    if (session.GetAwayCounter() == 0)
+      SendMessage("Wearer is currently at home.", chatId);
+    else
+      SendMessage("Wearer has been last seen at home " + String(session.GetAwayCounter(), DEC) + " minutes ago.", chatId);
   }
 }
 
