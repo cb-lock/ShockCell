@@ -25,13 +25,38 @@ The key safe encloses a compartment for storing the keys as well as all other co
 
 It is connected to the LAN as a Wi-Fi based client and powered over USB.
 
+## Shocker description (light version)
+
+Instead of the full safe with integrated shocker control, a light version with the shocker control only can be realized. In this version, the internet connectivity and app control is identical. The advantage is significantly reduced complexity building this.
+
+The schematic and board design is provided below labeled as "light" version.
+
 ## Operation
 
 To begin a session, you put all the chastity device keys into the key safe and close it. The ratchet mechanism keeps the lock box now closed until a valid unlock command is sent to the Telegram bot.
 
+***
+# How to prepare the software for use with the Arduino IDE
+
+- Rename the file Defs_template.h to Defs.h
+- This is necessary to customize the creadentials for Wi-Fi/WLAN access und connecting the Telegram bot.
+
+# How to do the Telegram setup
+
 ## Telegram bot
 
 The ShockCell key safe runs a bot for the Telegram Messenger App. The bot is the only interface to the key safe. It can be added to a group chat to control the key safe. While the group chat can be used for general communication between the holder, wearer and other users. the following commands are available to control the key safe. Any command must be send as a separate message and should not contain any other text. The prefix for each command is a slash "/".
+
+## Create the bot
+
+https://telegrambots.github.io/book/1/quickstart.html
+
+### Result
+This step provides as a result the bot authentication token. It has the following pattern:
+
+1234567:4TT8bAc8GHUspu3ERYn-KGcvsvGB9u_n4ddy
+
+This token is needed in the source code in file Defs.h
 
 ### Roles
 
@@ -74,6 +99,13 @@ The /start command lists all commands available for the role
 #define BOT_COMMANDS_WAITING "/waiting - Make wearer waiting to be captured by the holder\n/free - Make wearer free again (stops waiting for capture)\n"
 #define BOT_COMMANDS_CAPTURE "/capture - Capture wearer as a sub\n/release - Release wearer as a sub"
 #define BOT_COMMANDS_EMERGENCY "/thisisanemergency - Release the wearer in case of an emergency\n"
+
+***
+# How to setup the components of the light version of this project
+
+![Schematic](https://github.com/cb-lock/ShockCell/blob/1a3034a8b6907565f01edb1c4ef63b5c6e9200a3/ShockCell%20light_Schaltplan.png?raw=true)
+
+![Board design](https://github.com/cb-lock/ShockCell/blob/main/ShockCell%20light_Steckplatine.png?raw=true)
 
 ## Hardware components
 
