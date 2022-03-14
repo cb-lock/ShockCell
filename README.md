@@ -6,8 +6,6 @@ This project is about creating an internet-controlled electronic key safe with a
 
 A major additional function of the key safe is to trigger shocks using a shock device for remote controlled punishments.
 
-![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
-
 ## Use Case
 
 Chastity play between a remote holder and a chastity device wearer requires secure management of the keys allowing to unlock the chastity device. This key safe is meant to serve the purpose of allowing the holder to decide when keys are returned to the wearer.
