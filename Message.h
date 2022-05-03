@@ -145,12 +145,9 @@ public:
   void MessageIsOpen(String chatId);
   void MessageCoverStateChange(String chatId=GROUP_CHAT_ID);
   void MessageCoverState(String chatId=GROUP_CHAT_ID);
-//  void MessageSendEarnedCredits(int creditsEarned, String chatId=GROUP_CHAT_ID);
-  void MessageSendEarnedVouchers(int vouchersEarned, String chatId=GROUP_CHAT_ID);
   void MessageModes(String chatId=GROUP_CHAT_ID);
   void MessageUsers(String chatId=GROUP_CHAT_ID);
   void MessageRoles(String chatId=GROUP_CHAT_ID);
-  void MessageChastikeyState(String chatId=GROUP_CHAT_ID);
   void MessageState(String chatId=GROUP_CHAT_ID);
   void MessageTasks(String chatId=GROUP_CHAT_ID);
   void ShockAction(String durationStr, int count, String fromId, String chatId=GROUP_CHAT_ID);
@@ -165,9 +162,9 @@ public:
   void UnlockAction(String fromId, String chatId=GROUP_CHAT_ID, bool force=false);
   void LockTimerAction(String durationStr, String fromId, String chatId);
   void Play4UnlockAction(String fromId, String chatId=GROUP_CHAT_ID);
-  void PlayAction(String max, String fromId, String chatId=GROUP_CHAT_ID);
+//  void PlayAction(String max, String fromId, String chatId=GROUP_CHAT_ID);
   void ReleaseAction(String fromId, String chatId=GROUP_CHAT_ID);
-  void RestrictUserAction(String fromId, String chatId=GROUP_CHAT_ID);
+//  void RestrictUserAction(String fromId, String chatId=GROUP_CHAT_ID);
   void RandomShockModeAction(String commandParameter, String fromId, String chatId=GROUP_CHAT_ID, bool force=false);
   void VerificationModeAction(String commandParameter, String fromId, String chatId=GROUP_CHAT_ID, bool force=false);
   void CheckVerificationAction(String caption, String fromId, String chatId=GROUP_CHAT_ID);

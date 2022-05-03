@@ -258,6 +258,7 @@ bool EmlaServer::WPost(const String url, const String request, String & payload,
   return result;
 }
 
+/*
 // ------------------------------------------------------------------------
 bool EmlaServer::WDelete(const String url, const String request, String & payload)
 {
@@ -340,6 +341,7 @@ bool EmlaServer::WDelete(const String url, const String request, String & payloa
   }
   return result;
 }
+*/
 
 
 // ------------------------------------------------------------------------

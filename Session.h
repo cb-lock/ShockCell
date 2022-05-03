@@ -178,7 +178,6 @@ class Session
 private:
   String id;
   String chatId;
-  bool activeChastikeySession = false;
   bool randomShockMode = false;
   bool ramdomShockOffMessage30 = false;
   bool ramdomShockOffMessage10 = false;
@@ -190,7 +189,6 @@ private:
 //  int creditFractions = 0;
   int deviations = 0;
   int failures = 0;
-  String chastikeyHolder;
   unsigned int wearerPresence = 0;
   unsigned long endTime;
   String endTimeStr;
@@ -226,11 +224,6 @@ public:
 //  User & GetSupervisor() { return supervisor; }
 //  bool HasSupervisor() { return (supervisor.GetId().length() > 0); }
   bool IsActiveSession();
-  bool IsActiveChastikeySession() { return activeChastikeySession; }
-  void SetActiveChastikeySession(bool is) { activeChastikeySession = is; }
-
-  String GetChastikeyHolder() { return chastikeyHolder; }
-  void SetChastikeyHolder(String hname) { chastikeyHolder = hname; }
 
   unsigned long GetTimeOfLastUnlock() { return timeOfLastUnlock; }
   void SetTimeOfLastUnlock(unsigned long t) { timeOfLastUnlock = t; }
@@ -279,17 +272,6 @@ public:
   void SetRandomModeInt(int mode) { randomShockMode = (mode > 0); randomShocksPerHour = mode; }
   int GetRandomModeInt() { return randomShockMode ? randomShocksPerHour : 0; }
 
-/*
-  void SetVouchers(int newVal) { unlockVouchers = newVal; }
-  void SetVouchers(int newVal, String chatId);
-  int GetVouchers() { return unlockVouchers; }
-  void SetCredits(int newVal) { credits = newVal; }
-  void SetCredits(int newVal, String chatId);
-  int GetCredits() { return credits; }
-  void SetCreditFractions(int newVal);
-  void SetCreditFractions(int newVal, String chatId);
-  int GetCreditFractions() { return creditFractions; }
-*/
   void SetAwayCounter(unsigned long newVal) { awayCounter = newVal; }
   unsigned long GetAwayCounter() { return awayCounter; }
   void SetDeviations(int newVal) { deviations = newVal; }
@@ -307,7 +289,6 @@ public:
   void Lock();
   void ForcedUnlock();
   void Unlock();
-  void InfoChastikey();
 
   void ProcessRandomShocks();
   void ScheduleNextRandomShock();

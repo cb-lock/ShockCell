@@ -4,6 +4,7 @@
 #include "User.h"
 #include "Defs.h"
 #include "Message.h"
+#include "Session.h"
 
 
 RoleSet roles;
@@ -11,6 +12,7 @@ RoleSet roles;
 extern TimeFunctions timeFunc;
 extern UniversalTelegramBot bot;
 extern Message message;
+extern Session session;
 extern UserSet users;
 
 
@@ -243,6 +245,27 @@ String UserSet::GetUsersInfo()
     ++i;
   }
   return info;
+}
+
+
+// ------------------------------------------------------------------------
+bool UserSet::MayShock(String fromId)
+{
+  bool may;
+  User *u = users.GetUserFromId(fromId);
+  if (u)
+  {
+    if (u->IsHolder() ||
+        u->IsBot() ||
+        (u->IsTeaser() && session.IsTeasingMode()) ||
+        (u->IsWearer() && session.IsTeasingMode()) ||
+        (users.GetWearer()->IsFreeWearer()))
+      return true;
+    else
+      return false;
+  }
+  else
+    return false;
 }
 
 

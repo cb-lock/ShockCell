@@ -579,19 +579,24 @@ void Session::Shock(int count, long milliseconds, int level)
     Serial.print(milliseconds);
     Serial.println(" ms");
 
-    digitalWrite(shockPin, turnOn);
+//    digitalWrite(shockPin, turnOn);
+    digitalWrite(4, HIGH);
     delay(100);
-    digitalWrite(shockPin, turnOff);
+//    digitalWrite(shockPin, turnOff);
+    digitalWrite(4, LOW);
     delay(200);
 
-    digitalWrite(shockPin, turnOn);
+//    digitalWrite(shockPin, turnOn);
+    digitalWrite(4, HIGH);
     delay(firstBurst);
-    digitalWrite(shockPin, turnOff);
+//    digitalWrite(shockPin, turnOff);
+    digitalWrite(4, LOW);
     delay(50);
 
     while(milliseconds > delivered)
     {
-      digitalWrite(shockPin, turnOn);
+//    digitalWrite(shockPin, turnOn);
+      digitalWrite(4, HIGH);
       if ((milliseconds - delivered) > 10000L)
       {
         delay(10000L);
@@ -602,7 +607,8 @@ void Session::Shock(int count, long milliseconds, int level)
         delay(milliseconds - delivered);
         delivered += (milliseconds - delivered);
       }
-      digitalWrite(shockPin, turnOff);
+//    digitalWrite(shockPin, turnOff);
+      digitalWrite(4, LOW);
       delay(50);
     }
 
@@ -729,117 +735,10 @@ void Session::SubLockTimerEnd(unsigned long lockTime)
 }
 
 
-/*
-// ------------------------------------------------------------------------
-void Session::SetCredits(int newVal, String chatId)
-{
-  int creditCount = GetCredits();
-  SetCredits(newVal);
-  if (GetCredits() > creditCount)
-    message.SendMessage(String(SYMBOL_CREDIT) + " Wearer received " + (GetCredits() > creditCount) + " credits.", chatId);
-}
-
-
-// ------------------------------------------------------------------------
-void Session::SetCreditFractions(int newVal)
-{
-  creditFractions = newVal;
-  if (creditFractions >= 10)
-  {
-    int newCredits = creditFractions / 10;
-    creditFractions = creditFractions % 10;
-    SetCredits(GetCredits() + newCredits);
-  }
-}
-
-
-// ------------------------------------------------------------------------
-void Session::SetCreditFractions(int newVal, String chatId)
-{
-  int creditCount = GetCredits();
-  SetCreditFractions(newVal);
-  if (GetCredits() > creditCount)
-    message.SendMessage(String(SYMBOL_CREDIT) + " Wearer received " + (GetCredits() > creditCount) + " credits.", chatId);
-}
-
-
-// ------------------------------------------------------------------------
-void Session::SetVouchers(int newVal, String chatId)
-{
-  int voucherCount = GetVouchers();
-  SetVouchers(newVal);
-  if (GetVouchers() > voucherCount)
-    message.SendMessage(String(SYMBOL_VOUCHER) + " Wearer received " + (GetVouchers() > voucherCount) + " unlock vouchers.", chatId);
-}
-*/
-
-
 // ------------------------------------------------------------------------
 bool Session::IsActiveSession()
 {
-  return (! users.GetWearer()->IsFreeWearer()) || activeChastikeySession;
-}
-
-
-// ------------------------------------------------------------------------
-void Session::InfoChastikey()
-{
-  String payload;
-
-  Serial.println("*** Session::InfoChastikey()");
-/*
-  int trial = 0;
-  bool success = false;
-  while ((trial < 10) && ! success)
-  {
-    success = emlaServer.WGet("https://api.chastikey.com/v0.3/listlocks.php?username=cblock", payload);
-    trial++;
-    if (trial > 1)
-    {
-      Serial.print("Retry: ");
-      Serial.println(trial);
-    }
-    if (! success)
-      delay(1000);
-  }
-  //  Serial.println(payload);
-
-  if (payload.length() > 0)
-  {
-    // Extract values
-    const size_t capacity = JSON_ARRAY_SIZE(1) + JSON_ARRAY_SIZE(10) + JSON_OBJECT_SIZE(2) + JSON_OBJECT_SIZE(3) + 10*JSON_OBJECT_SIZE(7) + 1260;
-    DynamicJsonDocument doc(capacity);
-
-    deserializeJson(doc, payload);
-
-    JsonObject response_0 = doc["response"][0];
-    int response_0_status = response_0["status"]; // 200
-    const char* response_0_message = response_0["message"]; // "Success"
-    long response_0_timestampGenerated = response_0["timestampGenerated"]; // 1569859752
-
-    JsonArray locks = doc["locks"];
-
-    SetActiveChastikeySession(false);
-    SetChastikeyHolder("");
-    for (int i = 0; i < 25; i++)
-    {
-      JsonObject lockInfo = locks[i];
-      String lockStatus = lockInfo["status"]; // "UnlockedReal"
-      Serial.print("- Chastikey lock ");
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(lockStatus);
-      if (lockStatus == "Locked")
-      {
-        SetActiveChastikeySession(true);
-        SetChastikeyHolder(lockInfo["lockedBy"]);
-      }
-//      const char* locks_combination = locks["combination"]; // "84725435"
-    }
-  }
-  Serial.print("- Chastikey session: ");
-  Serial.println(IsActiveChastikeySession());
-  */
+  return (! users.GetWearer()->IsFreeWearer());
 }
 
 
@@ -964,6 +863,8 @@ void Session::ProcessRandomShocks()
     if (duration > RANDOM_SHOCK_AUTO_OFF_SECONDS)
     {
       message.SendMessage("Random mode will be turned off now, because it ran for " + String(RANDOM_SHOCK_AUTO_OFF_SECONDS/3600, DEC) + " hours.");
+      randomShockMode = false;
+      message.WriteCommandsAndSettings("Session-ProcessRandomShocks()");
       message.RandomShockModeAction("off", USER_ID_BOT, GROUP_CHAT_ID, FORCE);
       return;
     }

@@ -141,6 +141,7 @@ public:
 //  unsigned long GetLastMessageTime() { return lastMessageTime; }
 //  void SetLastMessageTime(unsigned long now) { lastMessageTime = now; }
   String GetUsersInfo();
+  bool MayShock(String fromId);
   void Update();
 };
 

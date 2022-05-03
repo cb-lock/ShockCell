@@ -37,7 +37,7 @@ public:
   void SetCookieFromHeader(String rawCookie);
   bool WGet(const String url, String & payload);
   bool WPost(const String url, const String request, String & payload, bool getSessionCookie = false);
-  bool WDelete(const String url, const String request, String & payload);
+//  bool WDelete(const String url, const String request, String & payload);
   String UrlEncode(const char *src);
 };
 
