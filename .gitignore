@@ -38,3 +38,5 @@
 Defs.h
 *.cpp~
 *.h~
+*.zip
+*.gz
