@@ -352,8 +352,9 @@ void Message::ShockAction(unsigned long milliseconds, int count, String fromId, 
     session.Shock(count, milliseconds);
 
     msg = "Shock processing completed. " SYMBOL_DEVIL_SMILE;
-    SendMessage(msg, chatId);
-    SendMessage(msg, USER_ID_BOT);
+    if (chatId != GROUP_CHAT_ID)
+      SendMessage(msg, chatId);
+//    SendMessage(msg, USER_ID_BOT);
     SendMessage(msg, GROUP_CHAT_ID);
     WriteCommandsAndSettings("Message-ShockAction() end");
   }

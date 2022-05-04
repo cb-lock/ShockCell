@@ -146,6 +146,7 @@ int Tasklist::Add(String msg, int tType, unsigned long tBegin, unsigned long tEn
 const String Tasklist::GetTaskList()
 {
   String str = "List of open tasks:\n";
+  /*
   Serial.println("*** Tasklist::GetTaskList()");
   for (int i = 0; i < MAX_TASKS; i++)
   {
@@ -153,6 +154,7 @@ const String Tasklist::GetTaskList()
     str += task[i].GetStatusMessage();
   }
   Print();
+*/
 
   return str;
 }
